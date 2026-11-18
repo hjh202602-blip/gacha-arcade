@@ -47,7 +47,7 @@ const TimerGame = (() => {
 
   function setUI(grade, cs) {
     const map = {
-      idle: ['🪙 코인 넣기', hooks.coins() > 0 ? '코인을 넣어주세요' : '코인이 없어요! 매장의 교환기로'],
+      idle: ['🪙 코인 넣기', hooks.coins() > 0 ? '코인을 넣어주세요' : '코인이 부족해요! 인형을 팔거나 교환기로'],
       ready: ['START', 'START를 누르면 시작!'],
       running: ['STOP', '정확히 10초에 STOP!'],
       result: ['...', grade ? `${grade}등급 인형 획득!` : cs !== undefined ? '아쉬워요! 오차 0.50초 이내면 인형을 받아요' : ''],

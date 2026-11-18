@@ -30,7 +30,8 @@
         <button class="changer" id="coin-changer">
           <span class="changer-screen">동전 교환기</span>
           <span class="changer-slot"></span>
-          <span class="changer-btn">누르면 🪙 +10</span>
+          <span class="changer-btn">무료 🪙 +5</span>
+          <span class="changer-note">코인이 3개 미만일 때만</span>
         </button>
         <a class="shelf-door" href="#/shelf">
           <span class="door-sign">내 인형 진열장</span>
@@ -289,12 +290,46 @@
     </div>
   </section>
 
+
+  <section class="view play" data-view="play-pusher" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="pusher-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="pusher-status"></span>
+              <span id="pusher-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="pusher-btn" class="act">🪙 코인 떨어뜨리기</button>
+            </div>
+            <p class="hint">판 위를 직접 누르면 그 자리에 떨어져요 · Space는 투입기 위치에</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">코인 1개씩 떨어뜨려요. 앞으로 떨어진 코인은 지갑으로 돌아오고, 양옆 홈으로 떨어지면 사라져요. 인형 뒤쪽에 코인을 모아 밀어보세요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
   <!-- 진열장 -->
   <section class="view shelf-view" data-view="shelf" hidden>
     <div class="shelf-wrap">
       <div class="shelf-head">
         <h1>내 인형 진열장</h1>
         <div class="shelf-stats" id="shelf-stats"></div>
+      </div>
+      <div class="sell-bar">
+        <span id="sell-info"></span>
+        <button id="sell-dupes" class="sell-btn">중복 인형 모두 팔기</button>
       </div>
       <div class="shelf-tabs" id="shelf-tabs"></div>
       <div id="shelf-body"></div>
@@ -311,9 +346,11 @@
       <h3 id="modal-name"></h3>
       <p class="modal-msg" id="modal-msg"></p>
       <p class="modal-desc" id="modal-desc"></p>
-      <button id="modal-ok">확인</button>
+      <div class="modal-actions" id="modal-actions"></div>
     </div>
   </div>
+
+  <div class="toast" id="toast" hidden></div>
 
   <script src="js/dolls.js"></script>
   <script src="js/claw.js"></script>
@@ -325,6 +362,7 @@
   <script src="js/keymaster.js"></script>
   <script src="js/scissors.js"></script>
   <script src="js/stacker.js"></script>
+  <script src="js/pusher.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

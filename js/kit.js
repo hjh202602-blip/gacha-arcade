@@ -42,5 +42,5 @@ const Kit = {
     };
   },
   // 코인 없을 때 공통 문구
-  idleMsg: hooks => (hooks.coins() > 0 ? '코인을 넣어주세요' : '코인이 없어요! 매장의 교환기로'),
+  idleMsg: hooks => (hooks.coins() > 0 ? '코인을 넣어주세요' : '코인이 부족해요! 인형을 팔거나 교환기로'),
 };

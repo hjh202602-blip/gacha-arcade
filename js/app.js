@@ -2,17 +2,33 @@
 const SAVE_KEY = 'mongle-claw-save-v2';
 const $ = id => document.getElementById(id);
 
-// save = { coins, owned: { dollId: { count, first, last } }, history: [{ id, t }] }
+// save = { coins, owned: { dollId: { count, first, last, sold } }, history, best, unlocked: [기계id] }
+// owned에 기록이 있으면 '발견한 인형'(도감 등록), count는 지금 가지고 있는 개수 (팔면 0이 될 수 있음)
 const save = (() => {
   let data = null;
   try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
-  return Object.assign({ coins: 10, owned: {}, history: [], best: {} }, data || {});
+  return Object.assign({ coins: 10, owned: {}, history: [], best: {}, unlocked: [] }, data || {});
 })();
 function persist() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
 }
 
 const ownedCount = id => (save.owned[id] ? save.owned[id].count : 0);
+const found = id => !!save.owned[id];
+const isUnlocked = m => !m.unlock || save.unlocked.includes(m.id);
+const priceOf = m => m.price || 1;
+const sellPrice = d => GRADES[d.grade].sell;
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.hidden = false;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.hidden = true; }, 2200);
+}
+function addCoins(n) {
+  save.coins += n; persist(); renderCoins(); bumpWallet();
+}
 const gradeStyle = g => `--g:${GRADES[g].color}`;
 const stars = n => '★'.repeat(n) + '☆'.repeat(4 - n);
 const LEVEL_NAME = ['', '쉬움', '보통', '어려움', '매우 어려움'];
@@ -22,7 +38,7 @@ const fmtTime = t => new Date(t).toLocaleString('ko-KR', { month: 'numeric', day
 // ================= 공통 =================
 function renderCoins() {
   $('coin-count').textContent = save.coins;
-  $('btn-coin').disabled = save.coins <= 0 || ClawGame.state !== 'idle';
+  $('btn-coin').disabled = save.coins < 1 || ClawGame.state !== 'idle';
   if (currentMachine && currentMachine.type !== 'claw') GAMES[currentMachine.type].refresh();
 }
 function bumpWallet() {
@@ -30,7 +46,7 @@ function bumpWallet() {
   w.classList.remove('bump'); void w.offsetWidth; w.classList.add('bump');
 }
 function renderNavCount() {
-  $('nav-count').textContent = DOLLS.filter(d => ownedCount(d.id)).length;
+  $('nav-count').textContent = DOLLS.filter(d => found(d.id)).length;
 }
 
 // ================= 매장 =================
@@ -61,12 +77,15 @@ function machinePreview(m) {
 }
 
 function renderStore() {
-  $('machine-row').innerHTML = MACHINES.map(m => {
+  const order = [...MACHINES].sort((a, b) => (a.unlock || 0) - (b.unlock || 0));
+  $('machine-row').innerHTML = order.map(m => {
     const pool = dollsOf(m.id);
-    const got = pool.filter(d => ownedCount(d.id)).length;
+    const got = pool.filter(d => found(d.id)).length;
+    const open = isUnlocked(m);
     const grades = [...new Set(pool.map(d => d.grade))].sort((a, b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b));
     return `
-    <a class="mcab" href="#/play/${m.id}" style="--cab:${m.theme.cab};--cab2:${m.theme.cab2}">
+    <a class="mcab ${open ? '' : 'locked'}" href="#/play/${m.id}" data-machine="${m.id}" style="--cab:${m.theme.cab};--cab2:${m.theme.cab2}">
+      <span class="price-tag">1회 ${priceOf(m)}코인</span>
       <div class="mcab-top">${m.name}</div>
       <div class="mcab-body">
         <div class="mcab-glass"><img src="${previewCache[m.id]}" alt="${m.name} 기계"></div>
@@ -74,10 +93,11 @@ function renderStore() {
       </div>
       <div class="mcab-base"><span class="chute-door">PUSH ▼</span><span class="coin-slot"></span></div>
       <div class="mcab-info">${m.desc}<br><b>수집 ${got} / ${pool.length}</b> · 등급 ${grades.join(' ')}</div>
+      ${open ? '' : `<div class="lock ${save.coins >= m.unlock ? 'can' : ''}"><b>🔒</b><span>🪙 ${m.unlock}코인으로 해금</span></div>`}
     </a>`;
   }).join('');
 
-  const owned = DOLLS.filter(d => ownedCount(d.id)).slice(-5);
+  const owned = DOLLS.filter(d => ownedCount(d.id) > 0).slice(-5);
   $('door-preview').innerHTML = owned.length
     ? owned.map(d => `<img src="${DollArt.url(d)}" alt="${d.name}">`).join('')
     : '아직 비어 있어요';
@@ -86,7 +106,7 @@ function renderStore() {
 function renderGradeLegend() {
   const hint = { S: '거의 안 나오고, 집어도 잘 빠짐', A: '드물고 잘 미끄러짐', B: '꽤 까다로움', C: '조금만 집중하면 OK', D: '자주 나오고 잘 잡힘' };
   $('grade-legend').innerHTML = GRADE_ORDER.map(g => `
-    <li><span class="grade-badge" style="${gradeStyle(g)}">${g}</span><span>${GRADES[g].name}</span><span>${hint[g]}</span></li>`).join('');
+    <li><span class="grade-badge" style="${gradeStyle(g)}">${g}</span><span>${GRADES[g].name} · 판매 🪙${GRADES[g].sell}</span><span>${hint[g]}</span></li>`).join('');
 }
 
 function buildLights() {
@@ -95,9 +115,47 @@ function buildLights() {
     Array.from({ length: 24 }, (_, i) => `<i style="--c:${cols[i % cols.length]};--d:${(i % 5) * 0.3}s"></i>`).join('');
 }
 
+// 무료 동전: 코인이 거의 없을 때만 (해금 경제가 무너지지 않게)
 $('coin-changer').onclick = () => {
-  save.coins += 10; persist(); renderCoins(); bumpWallet();
+  if (save.coins >= 3) { toast('동전 교환기는 코인이 3개 미만일 때만 쓸 수 있어요. 인형을 팔아 코인을 모아요!'); return; }
+  addCoins(5);
+  toast('무료 코인 5개를 받았어요!');
 };
+
+$('machine-row').addEventListener('click', e => {
+  const card = e.target.closest('[data-machine]');
+  if (!card) return;
+  const m = MACHINE_BY_ID[card.dataset.machine];
+  if (isUnlocked(m)) return;
+  e.preventDefault();
+  askUnlock(m);
+});
+
+function askUnlock(m) {
+  const enough = save.coins >= m.unlock;
+  showModal({
+    img: previewCache[m.id], color: m.theme.cab, badge: `🔒 잠긴 기계 · 1회 ${priceOf(m)}코인`,
+    name: m.name,
+    msg: enough ? `🪙 ${m.unlock}코인으로 해금할 수 있어요` : `해금하려면 🪙 ${m.unlock}코인이 필요해요 (${m.unlock - save.coins}개 부족)`,
+    desc: enough ? m.desc : '진열장에서 인형을 팔면 코인을 모을 수 있어요.',
+    buttons: [
+      { label: `🔓 ${m.unlock}코인으로 해금하기`, cls: 'gold', disabled: !enough, fn: () => unlock(m) },
+      enough ? { label: '나중에' } : { label: '진열장으로 가서 팔기', cls: 'primary', fn: () => { location.hash = '#/shelf'; } },
+    ],
+  });
+}
+
+function unlock(m) {
+  if (isUnlocked(m) || save.coins < m.unlock) return;
+  save.coins -= m.unlock;
+  save.unlocked.push(m.id);
+  persist(); renderCoins(); renderStore();
+  showModal({
+    img: previewCache[m.id], color: m.theme.cab, badge: '🔓 해금 완료',
+    name: m.name, msg: '새 기계가 열렸어요!', desc: m.desc,
+    buttons: [{ label: '바로 하러 가기', cls: 'primary', fn: () => { location.hash = `#/play/${m.id}`; } }, { label: '닫기' }],
+  });
+}
 
 // ================= 뽑기 기계 =================
 let currentMachine = null;
@@ -109,7 +167,7 @@ function openMachine(m) {
   sec.style.setProperty('--cab2', m.theme.cab2);
   sec.querySelector('.marquee').innerHTML = m.type === 'claw'
     ? `${m.name}<small>${stars(m.level)} 난이도 ${LEVEL_NAME[m.level]} · 집게 힘 ${Math.round(m.power * 100)}%</small>`
-    : `${m.name}<small>${stars(m.level)} ${m.levelText}</small>`;
+    : `${m.name}<small>${stars(m.level)} ${m.levelText} · 1회 ${priceOf(m)}코인</small>`;
   if (m.type === 'claw') ClawGame.setMachine(m); else GAMES[m.type].open(m);
   renderLineup();
   renderCoins();
@@ -120,15 +178,15 @@ function renderLineup() {
   if (!m) return;
   const odds = dollOdds(m.id);
   const pool = dollsOf(m.id).sort((a, b) => GRADE_ORDER.indexOf(a.grade) - GRADE_ORDER.indexOf(b.grade));
-  const got = pool.filter(d => ownedCount(d.id)).length;
+  const got = pool.filter(d => found(d.id)).length;
   const sec = playSection(m);
   sec.querySelector('.lineup-meta').textContent = `수집 ${got} / ${pool.length}`;
   sec.querySelector('.lineup').innerHTML = pool.map(d => {
-    const n = ownedCount(d.id);
-    return `<li class="${n ? '' : 'locked'}" style="${gradeStyle(d.grade)}">
+    const n = ownedCount(d.id), f = found(d.id);
+    return `<li class="${f ? '' : 'locked'}" style="${gradeStyle(d.grade)}">
       <img src="${DollArt.url(d)}" alt="">
       <div>
-        <div class="nm">${n ? d.name : '???'} <span class="grade-badge" style="${gradeStyle(d.grade)}">${d.grade}</span></div>
+        <div class="nm">${f ? d.name : '???'} <span class="grade-badge" style="${gradeStyle(d.grade)}">${d.grade}</span></div>
         <div class="sub">${GRADES[d.grade].name} · ${m.rules ? m.rules[d.grade] : `출현 ${odds[d.id].toFixed(1)}%`}</div>
       </div>
       <span class="own">${n ? 'x' + n : ''}</span>
@@ -137,7 +195,7 @@ function renderLineup() {
 }
 
 const STATUS = {
-  idle: () => (save.coins > 0 ? '코인을 넣어주세요' : '코인이 없어요! 매장의 교환기로'),
+  idle: () => (save.coins > 0 ? '코인을 넣어주세요' : '코인이 없어요! 인형을 팔거나 매장의 교환기로'),
   ready: () => '움직이고 집기!',
   drop: () => '내려가는 중...',
   close: () => '집는 중...',
@@ -162,8 +220,8 @@ function award(doll, note) {
   persist();
   renderLineup();
   renderNavCount();
-  const head = first ? '🎉 새로운 인형 획득! 진열장에 전시됐어요' : '🎉 인형 획득!';
-  queueModal(doll, note ? `${note} · ${head}` : head);
+  const head = first ? '🎉 새로운 인형 획득! 진열장에 전시됐어요' : `🎉 인형 획득! (보유 ${rec.count}개)`;
+  queueModal(dollModal(doll, note ? `${note} · ${head}` : head));
 }
 
 ClawGame.init($('claw-canvas'), {
@@ -194,12 +252,15 @@ ClawGame.init($('claw-canvas'), {
 
 // 캡슐 / 펀치 / 10초 기계
 const gameHooks = {
-  coins: () => save.coins,
+  // 지금 기계를 몇 번 할 수 있는지 (기계마다 1회 가격이 다름)
+  coins: () => Math.floor(save.coins / priceOf(currentMachine || MACHINES[0])),
   spendCoin() {
-    if (save.coins <= 0) return false;
-    save.coins--; persist(); renderCoins(); bumpWallet();
+    const p = priceOf(currentMachine || MACHINES[0]);
+    if (save.coins < p) { toast(`코인이 부족해요 (1회 ${p}코인)`); return false; }
+    save.coins -= p; persist(); renderCoins(); bumpWallet();
     return true;
   },
+  addCoins,
   award,
   // 최고 기록: 값을 주면 갱신 후 반환, 없으면 조회만 (lower=true면 낮을수록 좋음)
   best(key, val, lower) {
@@ -213,11 +274,12 @@ const gameHooks = {
 const GAMES = {
   capsule: CapsuleGame, punch: PunchGame, timer: TimerGame,
   keyring: KeyringGame, keymaster: KeymasterGame, scissors: ScissorsGame, stacker: StackerGame,
+  pusher: PusherGame,
 };
 CapsuleGame.init({ canvas: $('capsule-canvas'), btn: $('capsule-btn'), status: $('capsule-status'), extra: $('capsule-extra') }, gameHooks);
 PunchGame.init({ canvas: $('punch-canvas'), btn: $('punch-btn'), status: $('punch-status'), extra: $('punch-extra') }, gameHooks);
 TimerGame.init({ screen: $('timer-screen'), digits: $('timer-digits'), sub: $('timer-sub'), btn: $('timer-btn'), status: $('timer-status'), extra: $('timer-extra') }, gameHooks);
-for (const type of ['keyring', 'keymaster', 'scissors', 'stacker']) {
+for (const type of ['keyring', 'keymaster', 'scissors', 'stacker', 'pusher']) {
   GAMES[type].init({ canvas: $(`${type}-canvas`), btn: $(`${type}-btn`), status: $(`${type}-status`), extra: $(`${type}-extra`) }, gameHooks);
 }
 for (const [type, g] of Object.entries(GAMES)) {
@@ -272,12 +334,18 @@ document.addEventListener('keyup', e => {
 let shelfTab = 'all';
 
 function renderShelf() {
-  const uniq = DOLLS.filter(d => ownedCount(d.id)).length;
+  const uniq = DOLLS.filter(d => found(d.id)).length;
   const total = DOLLS.reduce((s, d) => s + ownedCount(d.id), 0);
-  const sCount = DOLLS.filter(d => d.grade === 'S' && ownedCount(d.id)).length;
+  const sCount = DOLLS.filter(d => d.grade === 'S' && found(d.id)).length;
+  const dupes = DOLLS.reduce((s, d) => s + Math.max(0, ownedCount(d.id) - 1), 0);
+  const dupeValue = DOLLS.reduce((s, d) => s + Math.max(0, ownedCount(d.id) - 1) * sellPrice(d), 0);
+  $('sell-info').textContent = dupes
+    ? `중복 인형 ${dupes}개 · 모두 팔면 🪙 ${dupeValue}코인 (종류마다 1개씩은 남겨요)`
+    : '중복 인형이 없어요. 같은 인형을 또 뽑으면 팔 수 있어요.';
+  $('sell-dupes').disabled = !dupes;
   $('shelf-stats').innerHTML = `
     <div class="stat"><b>${uniq} / ${DOLLS.length}</b>도감 수집</div>
-    <div class="stat"><b>${total}</b>뽑은 인형 수</div>
+    <div class="stat"><b>${total}</b>보유 인형 수</div>
     <div class="stat"><b>${sCount} / ${DOLLS.filter(d => d.grade === 'S').length}</b>전설 등급</div>`;
 
   const tabs = [{ id: 'all', name: '전체' }, ...MACHINES];
@@ -288,15 +356,16 @@ function renderShelf() {
   $('shelf-body').innerHTML = GRADE_ORDER.map(g => {
     const row = list.filter(d => d.grade === g);
     if (!row.length) return '';
-    const got = row.filter(d => ownedCount(d.id)).length;
+    const got = row.filter(d => found(d.id)).length;
     return `<div class="grade-row">
-      <h3><span class="grade-badge" style="${gradeStyle(g)}">${g}</span>${GRADES[g].name} <small>${got} / ${row.length}</small></h3>
+      <h3><span class="grade-badge" style="${gradeStyle(g)}">${g}</span>${GRADES[g].name} <small>${got} / ${row.length} · 판매가 🪙${GRADES[g].sell}</small></h3>
       <div class="plank">${row.map(d => {
-        const n = ownedCount(d.id);
-        return `<button class="doll-card ${n ? '' : 'locked'} ${n && recent.has(d.id) ? 'new' : ''}" data-doll="${d.id}" title="${n ? d.name : '아직 못 뽑은 인형'}">
+        const n = ownedCount(d.id), f = found(d.id);
+        const cls = !f ? 'locked' : n ? '' : 'sold';
+        return `<button class="doll-card ${cls} ${n && recent.has(d.id) ? 'new' : ''}" data-doll="${d.id}" title="${f ? d.name : '아직 못 뽑은 인형'}">
           ${n > 1 ? `<span class="cnt">x${n}</span>` : ''}
-          <img src="${DollArt.url(d)}" alt="${n ? d.name : '미획득'}">
-          <span class="nm">${n ? d.name : '???'}</span>
+          <img src="${DollArt.url(d)}" alt="${f ? d.name : '미획득'}">
+          <span class="nm">${f ? d.name : '???'}</span>
           <span class="mc">${MACHINE_BY_ID[d.machine].name}</span>
         </button>`;
       }).join('')}</div>
@@ -320,27 +389,86 @@ $('shelf-tabs').addEventListener('click', e => {
 $('shelf-body').addEventListener('click', e => {
   const b = e.target.closest('[data-doll]');
   if (!b) return;
-  const d = DOLL_BY_ID[b.dataset.doll], rec = save.owned[d.id];
-  if (rec) showModal(d, `보유 ${rec.count}개 · 처음 뽑은 날 ${fmtTime(rec.first)}`);
-  else showModal(d, `'${MACHINE_BY_ID[d.machine].name}' 기계에서 뽑을 수 있어요`, true);
+  openDollDetail(DOLL_BY_ID[b.dataset.doll]);
 });
 
+function openDollDetail(d) {
+  const rec = save.owned[d.id];
+  if (!rec) {
+    const m = MACHINE_BY_ID[d.machine];
+    showModal({ ...dollModal(d, `'${m.name}' 기계에서 뽑을 수 있어요${isUnlocked(m) ? '' : ' (잠김)'}`), locked: true, name: '???', desc: '아직 정체를 알 수 없는 인형이에요.' });
+    return;
+  }
+  const p = sellPrice(d), n = rec.count;
+  const buttons = [];
+  if (n > 1) buttons.push({ label: `중복 ${n - 1}개 팔기 (+${(n - 1) * p}코인)`, cls: 'gold', fn: () => { sellDoll(d, n - 1); openDollDetail(d); } });
+  if (n > 0) buttons.push({ label: `1개 팔기 (+${p}코인)${n === 1 ? ' · 마지막 1개' : ''}`, cls: n === 1 ? '' : 'gold', fn: () => { sellDoll(d, 1); openDollDetail(d); } });
+  buttons.push({ label: '닫기' });
+  showModal({
+    ...dollModal(d, n ? `보유 ${n}개 · 판매가 개당 🪙${p} · 처음 뽑은 날 ${fmtTime(rec.first)}` : `지금은 가지고 있지 않아요 (판매함) · 처음 뽑은 날 ${fmtTime(rec.first)}`),
+    locked: !n, buttons,
+  });
+}
+
+function sellDoll(d, n) {
+  const rec = save.owned[d.id];
+  n = Math.min(n, rec ? rec.count : 0);
+  if (n <= 0) return;
+  rec.count -= n;
+  rec.sold = (rec.sold || 0) + n;
+  save.coins += n * sellPrice(d);
+  persist(); renderCoins(); bumpWallet();
+  if (currentView === 'shelf') renderShelf();
+  toast(`${d.name} ${n}개를 팔아 🪙 ${n * sellPrice(d)}코인을 받았어요`);
+}
+
+$('sell-dupes').onclick = () => {
+  const list = DOLLS.filter(d => ownedCount(d.id) > 1);
+  const n = list.reduce((s, d) => s + ownedCount(d.id) - 1, 0);
+  const v = list.reduce((s, d) => s + (ownedCount(d.id) - 1) * sellPrice(d), 0);
+  showModal({
+    img: DollArt.url(list[0]), color: '#ffd23f', badge: '중복 인형 판매',
+    name: `${n}개 팔기`, msg: `🪙 ${v}코인을 받아요`, desc: '종류마다 1개씩은 진열장에 남겨요.',
+    buttons: [
+      { label: `모두 팔기 (+${v}코인)`, cls: 'gold', fn: () => {
+        list.forEach(d => { const r = save.owned[d.id]; r.sold = (r.sold || 0) + r.count - 1; r.count = 1; });
+        save.coins += v; persist(); renderCoins(); bumpWallet(); renderShelf();
+        toast(`중복 인형 ${n}개를 팔아 🪙 ${v}코인을 받았어요`);
+      } },
+      { label: '취소' },
+    ],
+  });
+};
+
 // ================= 팝업 (연속 당첨은 순서대로) =================
+// spec = { img, color, badge, name, msg, desc, locked, buttons: [{ label, cls, disabled, fn }] }
 const modalQueue = [];
-function queueModal(doll, msg) { modalQueue.push([doll, msg]); if ($('modal').hidden) nextModal(); }
-function nextModal() { const m = modalQueue.shift(); if (m) showModal(...m); }
-function showModal(d, msg, locked) {
-  $('modal').style.setProperty('--g', GRADES[d.grade].color);
-  $('modal-img').src = DollArt.url(d);
-  $('modal-img').style.filter = locked ? 'brightness(0) opacity(.45)' : '';
-  $('modal-grade').textContent = `${d.grade} · ${GRADES[d.grade].name}`;
-  $('modal-grade').setAttribute('style', gradeStyle(d.grade));
-  $('modal-name').textContent = locked ? '???' : d.name;
-  $('modal-msg').textContent = msg;
-  $('modal-desc').textContent = locked ? '아직 정체를 알 수 없는 인형이에요.' : d.desc;
+function queueModal(spec) { modalQueue.push(spec); if ($('modal').hidden) nextModal(); }
+function nextModal() { const m = modalQueue.shift(); if (m) showModal(m); }
+function dollModal(d, msg) {
+  return { img: DollArt.url(d), color: GRADES[d.grade].color, badge: `${d.grade} · ${GRADES[d.grade].name}`, name: d.name, msg, desc: d.desc };
+}
+function showModal(spec) {
+  $('modal').style.setProperty('--g', spec.color);
+  $('modal-img').src = spec.img;
+  $('modal-img').style.filter = spec.locked ? 'brightness(0) opacity(.45)' : '';
+  $('modal-grade').textContent = spec.badge;
+  $('modal-grade').setAttribute('style', `--g:${spec.color}`);
+  $('modal-name').textContent = spec.name;
+  $('modal-msg').textContent = spec.msg;
+  $('modal-desc').textContent = spec.desc || '';
+  const box = $('modal-actions');
+  box.innerHTML = '';
+  for (const b of spec.buttons || [{ label: '확인', cls: 'primary' }]) {
+    const el = document.createElement('button');
+    el.textContent = b.label;
+    if (b.cls) el.className = b.cls;
+    el.disabled = !!b.disabled;
+    el.onclick = () => { $('modal').hidden = true; if (b.fn) b.fn(); if ($('modal').hidden) nextModal(); };
+    box.appendChild(el);
+  }
   $('modal').hidden = false;
 }
-$('modal-ok').onclick = () => { $('modal').hidden = true; nextModal(); };
 
 // ================= 화면 전환 =================
 // #/ 매장 · #/play/<기계id> · #/shelf 진열장
@@ -348,7 +476,8 @@ let currentView = 'store';
 const previewCache = {};
 function route() {
   const [, page, arg] = location.hash.replace(/^#/, '').split('/');
-  const m = page === 'play' ? MACHINE_BY_ID[arg] : null;
+  let m = page === 'play' ? MACHINE_BY_ID[arg] : null;
+  if (m && !isUnlocked(m)) { const lockedM = m; location.replace('#/'); setTimeout(() => askUnlock(lockedM), 0); m = null; }
   if (m) currentView = 'play-' + m.type;
   else if (page === 'shelf') currentView = 'shelf';
   else currentView = 'store';

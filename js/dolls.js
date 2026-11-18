@@ -2,11 +2,11 @@
 
 // 입수 난이도 등급: 높을수록 잘 안 나오고(weight), 잘 안 잡히고(hold), 잘 미끄러짐(slip)
 const GRADES = {
-  S: { name: '전설',       color: '#ffd23f', weight: 1.5, hold: 0.45, slip: 0.85, r: 28 },
-  A: { name: '매우 어려움', color: '#ff8c42', weight: 5,   hold: 0.6,  slip: 0.7,  r: 27 },
-  B: { name: '어려움',     color: '#c77dff', weight: 14,  hold: 0.75, slip: 0.55, r: 26 },
-  C: { name: '보통',       color: '#5bc0eb', weight: 30,  hold: 0.9,  slip: 0.4,  r: 25 },
-  D: { name: '쉬움',       color: '#8bd17c', weight: 50,  hold: 1.0,  slip: 0.25, r: 24 },
+  S: { name: '전설',       color: '#ffd23f', sell: 50, weight: 1.5, hold: 0.45, slip: 0.85, r: 28 },
+  A: { name: '매우 어려움', color: '#ff8c42', sell: 15, weight: 5,   hold: 0.6,  slip: 0.7,  r: 27 },
+  B: { name: '어려움',     color: '#c77dff', sell: 6, weight: 14,  hold: 0.75, slip: 0.55, r: 26 },
+  C: { name: '보통',       color: '#5bc0eb', sell: 3, weight: 30,  hold: 0.9,  slip: 0.4,  r: 25 },
+  D: { name: '쉬움',       color: '#8bd17c', sell: 1, weight: 50,  hold: 1.0,  slip: 0.25, r: 24 },
 };
 const GRADE_ORDER = ['S', 'A', 'B', 'C', 'D'];
 
@@ -15,44 +15,47 @@ const MACHINES = [
   { id: 'animal', type: 'claw', name: '몽글 동물원', level: 1, power: 1.0,
     desc: '처음이라면 여기부터! 말랑한 동물 친구들',
     theme: { cab: '#ff7eb3', cab2: '#c94f86', inside: ['#ffd6e7', '#f2a3c4'], floor: '#b8487c' } },
-  { id: 'dessert', type: 'claw', name: '달콤 디저트', level: 2, power: 0.9,
+  { id: 'dessert', type: 'claw', unlock: 20, name: '달콤 디저트', level: 2, power: 0.9,
     desc: '보기만 해도 달달한 디저트 인형',
     theme: { cab: '#ffb347', cab2: '#d17d22', inside: ['#fff1d6', '#ffd08a'], floor: '#b9732a' } },
-  { id: 'space', type: 'claw', name: '우주 몬스터', level: 3, power: 0.8,
+  { id: 'space', type: 'claw', unlock: 60, name: '우주 몬스터', level: 3, power: 0.8,
     desc: '먼 은하에서 온 이상하고 귀여운 몬스터',
     theme: { cab: '#6a6ff0', cab2: '#3b34a8', inside: ['#1b1645', '#3d2e80'], floor: '#2a2266' } },
-  { id: 'treasure', type: 'claw', name: '전설의 보물섬', level: 4, power: 0.65,
+  { id: 'treasure', type: 'claw', unlock: 150, name: '전설의 보물섬', level: 4, power: 0.65,
     desc: '집게 힘이 약하다는 소문… 전설 인형이 잠든 곳',
     theme: { cab: '#e8b33a', cab2: '#9c6c10', inside: ['#3a2812', '#6b4a1e'], floor: '#4a3010' } },
 
   // ---- 인형뽑기가 아닌 기계들 ----
-  { id: 'capsule', type: 'capsule', name: '캡슐 토이', level: 2, levelText: '운에 맡기기',
+  { id: 'capsule', type: 'capsule', price: 3, name: '캡슐 토이', level: 2, levelText: '운에 맡기기',
     desc: '레버를 돌리면 캡슐이 데구루루. 황금 캡슐이 나오면 대박!',
     theme: { cab: '#ff6b6b', cab2: '#b83a4a', inside: ['#ffe8e0', '#ffc9bd'], floor: '#a83246' } },
   { id: 'punch', type: 'punch', name: '펀치 챔피언', level: 3, levelText: '타이밍',
     desc: '게이지가 꼭대기에 닿는 순간 펀치! 점수가 높을수록 좋은 인형',
     theme: { cab: '#ff5a36', cab2: '#a8321b', inside: ['#2b1a1a', '#4a2424'], floor: '#3a1a12' },
     rules: { S: '950점 이상', A: '850점 이상', B: '700점 이상', C: '500점 이상', D: '300점 이상' } },
-  { id: 'timer', type: 'timer', name: '10초 챌린지', level: 3, levelText: '집중력',
+  { id: 'timer', type: 'timer', unlock: 25, name: '10초 챌린지', level: 3, levelText: '집중력',
     desc: '3초 뒤 숫자가 사라진다. 정확히 10초에 멈춰라!',
     theme: { cab: '#2ec4b6', cab2: '#167a72', inside: ['#d9fffa', '#9fe8df'], floor: '#11635c' },
     rules: { S: '정확히 10.00초', A: '오차 0.05초 이내', B: '오차 0.12초 이내', C: '오차 0.25초 이내', D: '오차 0.50초 이내' } },
-  { id: 'keyring', type: 'keyring', name: '열쇠고리 걸기', level: 2, levelText: '타이밍 · 고리 걸기',
+  { id: 'keyring', type: 'keyring', unlock: 40, name: '열쇠고리 걸기', level: 2, levelText: '타이밍 · 고리 걸기',
     desc: '지나가는 열쇠고리의 고리에 갈고리를 쏙! 고리가 작을수록 귀한 키링',
     theme: { cab: '#7c5cff', cab2: '#4a32b8', inside: ['#efe9ff', '#cbbdff'], floor: '#3a2690' },
     rules: { S: '고리 아주아주 작음', A: '고리 아주 작음', B: '고리 작음', C: '고리 보통', D: '고리 큼' } },
-  { id: 'keymaster', type: 'keymaster', name: '키 마스터', level: 4, levelText: '정밀 조준',
+  { id: 'keymaster', type: 'keymaster', unlock: 80, name: '키 마스터', level: 4, levelText: '정밀 조준',
     desc: '열쇠를 가로·세로로 멈춰 사물함 열쇠구멍에 꽂아라',
     theme: { cab: '#3a3f58', cab2: '#1e2133', inside: ['#1b1d2c', '#2e3352'], floor: '#111320' },
     rules: { S: '열쇠구멍 9×14', A: '열쇠구멍 13×18', B: '열쇠구멍 17×22', C: '열쇠구멍 22×26', D: '열쇠구멍 28×32' } },
-  { id: 'scissors', type: 'scissors', name: '싹둑 가위', level: 3, levelText: '누르고 떼기',
+  { id: 'scissors', type: 'scissors', unlock: 50, name: '싹둑 가위', level: 3, levelText: '누르고 떼기',
     desc: '꾹 누르면 가위가 가고, 떼면 싹둑! 흔들리는 실을 잘라라',
     theme: { cab: '#4cc9f0', cab2: '#1f7fa3', inside: ['#e8fbff', '#b3ecff'], floor: '#176b8a' },
     rules: { S: '실이 아주 심하게 흔들림', A: '많이 흔들림', B: '흔들림', C: '살짝 흔들림', D: '거의 안 흔들림' } },
-  { id: 'stacker', type: 'stacker', name: '스태커', level: 4, levelText: '타이밍 · 쌓기',
+  { id: 'stacker', type: 'stacker', unlock: 100, name: '스태커', level: 4, levelText: '타이밍 · 쌓기',
     desc: '블록을 멈춰 한 층씩 쌓기. 꼭대기 12층이면 전설!',
     theme: { cab: '#ff4fa0', cab2: '#a3195e', inside: ['#160a1e', '#2a1236'], floor: '#0b0510' },
     rules: { S: '꼭대기 12층', A: '10층', B: '8층', C: '6층', D: '4층' } },
+  { id: 'pusher', type: 'pusher', unlock: 30, name: '코인 푸셔', level: 2, levelText: '밀어내기',
+    desc: '코인을 떨어뜨려 밀어내기! 앞으로 떨어진 코인은 내 것, 인형도 밀어서 떨어뜨려요',
+    theme: { cab: '#ffb000', cab2: '#b86e00', inside: ['#2b1f3a', '#3d2a55'], floor: '#1a1124' } },
 ];
 
 const DOLLS = [
@@ -197,6 +200,18 @@ const DOLLS = [
     shape: 'wide', color: '#7ec8ff', belly: '#e3f4ff', ears: 'none', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['spout'] },
   { id: 'st_king', machine: 'stacker', grade: 'S', name: '꼭대기왕', desc: '12층 꼭대기에 오른 자만 만나는 왕.',
     shape: 'round', color: '#ffd23f', ears: 'horns', eyes: 'sparkle', mouth: 'fang', cheeks: true, extras: ['crown', 'wings', 'sparkles'] },
+
+  // 코인 푸셔 (출현 확률)
+  { id: 'pu_bun', machine: 'pusher', grade: 'D', name: '동전빵', desc: '동전 모양 붕어빵. 따끈따끈하다.',
+    shape: 'wide', color: '#f2b45a', belly: '#ffd98a', ears: 'none', eyes: 'dot', mouth: 'smile', cheeks: true, extras: ['starmark'] },
+  { id: 'pu_mouse', machine: 'pusher', grade: 'C', name: '짤랑쥐', desc: '주머니에서 늘 동전 소리가 난다.',
+    shape: 'round', color: '#c9c9d6', inner: '#ffb3c7', ears: 'round', eyes: 'sparkle', mouth: 'w', cheeks: true },
+  { id: 'pu_chick', machine: 'pusher', grade: 'B', name: '금병아리', desc: '황금알을 낳을 꿈을 꾸는 병아리.',
+    shape: 'round', color: '#ffe680', ears: 'none', eyes: 'dot', mouth: 'beak', cheeks: true, extras: ['wings'] },
+  { id: 'pu_dragon', machine: 'pusher', grade: 'A', name: '보물지킴용', desc: '동전 더미 위에서 낮잠 자는 용.',
+    shape: 'wide', color: '#5cbf60', belly: '#ffe9a8', ears: 'horns', eyes: 'happy', mouth: 'fang', cheeks: true, extras: ['spots'] },
+  { id: 'pu_king', machine: 'pusher', grade: 'S', name: '동전왕', desc: '세상 모든 동전의 주인. 벨트도 순금.',
+    shape: 'round', color: '#ffd23f', belly: '#fff0b3', ears: 'round', eyes: 'sparkle', mouth: 'smile', cheeks: true, extras: ['crown', 'belt', 'sparkles'] },
 ];
 
 const DOLL_BY_ID = Object.fromEntries(DOLLS.map(d => [d.id, d]));
