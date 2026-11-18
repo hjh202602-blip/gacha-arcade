@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>몽글몽글 인형뽑기</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="logo">🧸 몽글몽글 인형뽑기</a>
+    <nav class="nav">
+      <a href="#/" data-nav="store">매장</a>
+      <a href="#/shelf" data-nav="shelf">내 인형 진열장 <span class="badge" id="nav-count">0</span></a>
+    </nav>
+    <div class="wallet" title="보유 코인">🪙 <span id="coin-count">0</span></div>
+  </header>
+
+  <!-- 매장 -->
+  <section class="view store" data-view="store">
+    <div class="store-wall">
+      <div class="lights" aria-hidden="true"></div>
+      <div class="neon-sign">몽글몽글 <b>인형뽑기</b></div>
+      <div class="neon-sub">24시 무인 운영 · 1회 1코인 · 뽑은 인형은 진열장에 보관돼요</div>
+    </div>
+    <div class="store-floor">
+      <div class="machine-row" id="machine-row"></div>
+
+      <div class="store-extras">
+        <button class="changer" id="coin-changer">
+          <span class="changer-screen">동전 교환기</span>
+          <span class="changer-slot"></span>
+          <span class="changer-btn">누르면 🪙 +10</span>
+        </button>
+        <a class="shelf-door" href="#/shelf">
+          <span class="door-sign">내 인형 진열장</span>
+          <span class="door-preview" id="door-preview"></span>
+          <span class="door-go">들어가기 →</span>
+        </a>
+        <div class="grade-board">
+          <h3>입수 난이도 등급표</h3>
+          <ul id="grade-legend"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 뽑기 기계 -->
+  <section class="view play" data-view="play-claw" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet" id="cabinet">
+          <div class="marquee"></div>
+          <canvas id="claw-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="claw-status">코인을 넣어주세요</span>
+              <span id="claw-timer"></span>
+            </div>
+            <div class="controls">
+              <button id="btn-left" class="pad" aria-label="왼쪽">◀</button>
+              <button id="btn-drop" class="drop">집기</button>
+              <button id="btn-right" class="pad" aria-label="오른쪽">▶</button>
+            </div>
+            <div class="coin-row">
+              <button id="btn-coin" class="coin">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">키보드: ← → 이동 · Space 코인/집기</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">등급이 높을수록 잘 안 나오고, 집어도 잘 미끄러져요. 인형 정중앙을 노리세요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="view play" data-view="play-capsule" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="capsule-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="capsule-status"></span>
+              <span id="capsule-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="capsule-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">레버와 캡슐을 직접 눌러도 돼요 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">순수한 운! 은빛 캡슐은 A등급, 황금 캡슐은 S등급이에요.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-punch" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="punch-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="punch-status"></span>
+              <span id="punch-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="punch-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 펀치 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">오른쪽 게이지가 꼭대기에 가까울 때 펀치할수록 점수가 높아요. 999점에 도전!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-timer" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <div class="timer-screen" id="timer-screen">
+            <div class="timer-lights" aria-hidden="true"></div>
+            <div class="timer-digits" id="timer-digits">00.00</div>
+            <div class="timer-sub" id="timer-sub">정확히 10.00초에 멈춰라!</div>
+          </div>
+          <div class="panel">
+            <div class="status">
+              <span id="timer-status"></span>
+              <span id="timer-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="timer-btn" class="act big-btn">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">Space로 START / STOP</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">3초가 지나면 숫자가 사라져요. 마음속으로 10초를 세고 STOP!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="view play" data-view="play-keyring" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="keyring-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="keyring-status"></span>
+              <span id="keyring-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="keyring-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 발사 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">갈고리가 올라가는 데 시간이 걸려요. 고리가 점선에 닿기 조금 전에 미리 발사하세요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-keymaster" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="keymaster-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="keymaster-status"></span>
+              <span id="keymaster-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="keymaster-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 멈춤 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">① 가로 ② 세로 두 번 멈춰서 열쇠구멍 안에 들어가야 해요. 구멍이 작을수록 좋은 상품!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-scissors" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="scissors-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="scissors-status"></span>
+              <span id="scissors-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="scissors-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">버튼이나 Space를 꾹 누르고 있다가 떼기</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">가위는 오른쪽으로만 가요. 지나치면 되돌아갈 수 없어요. 흔들리는 실의 박자를 보세요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-stacker" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="stacker-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="stacker-status"></span>
+              <span id="stacker-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="stacker-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 STOP · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">어긋난 블록은 떨어지고, 4층·8층부터는 블록 폭이 줄어요. 위로 갈수록 빨라져요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 진열장 -->
+  <section class="view shelf-view" data-view="shelf" hidden>
+    <div class="shelf-wrap">
+      <div class="shelf-head">
+        <h1>내 인형 진열장</h1>
+        <div class="shelf-stats" id="shelf-stats"></div>
+      </div>
+      <div class="shelf-tabs" id="shelf-tabs"></div>
+      <div id="shelf-body"></div>
+
+      <h2 class="history-title">최근 뽑기 기록</h2>
+      <ol class="history" id="history"></ol>
+    </div>
+  </section>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card">
+      <img class="modal-doll" id="modal-img" alt="">
+      <div class="grade-badge big" id="modal-grade"></div>
+      <h3 id="modal-name"></h3>
+      <p class="modal-msg" id="modal-msg"></p>
+      <p class="modal-desc" id="modal-desc"></p>
+      <button id="modal-ok">확인</button>
+    </div>
+  </div>
+
+  <script src="js/dolls.js"></script>
+  <script src="js/claw.js"></script>
+  <script src="js/capsule.js"></script>
+  <script src="js/punch.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/kit.js"></script>
+  <script src="js/keyring.js"></script>
+  <script src="js/keymaster.js"></script>
+  <script src="js/scissors.js"></script>
+  <script src="js/stacker.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
