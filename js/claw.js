@@ -22,7 +22,7 @@ const ClawGame = (() => {
   function newClaw() {
     return { x: HOME_X, y: HOME_Y, vx: 0, vy: 0, open: 0, closeTo: 0,
              state: 'idle', t: 0, timer: 0, held: null, target: null,
-             willHold: false, slipTime: -1 };
+             willHold: false, slipTime: -1, turns: 0, lastDir: 0 };
   }
 
   let machine = MACHINES[0];
@@ -137,6 +137,18 @@ const ClawGame = (() => {
   const centerZone = m => (m.level >= 4 ? 0.86 : m.level >= 3 ? 0.82 : 0.74);
   const NEAR_ZONE = 0.4;
 
+  // 숨겨진 행동 (기계마다 다름) → 맞으면 hooks.secret()이 일정 확률로 히든 인형을 줌
+  const CLAW_SECRET = {
+    animal: c => c.x < CHUTE_X,                // 빈 출구 위에서 내리기
+    dessert: (c, auto) => auto,                // 시간이 다 될 때까지 기다리기
+    space: c => c.x >= RIGHT - 32,             // 오른쪽 끝 벽에 붙여 내리기
+    treasure: c => c.turns >= 10,              // 좌우로 10번 넘게 방향 바꾸기
+  };
+  function secretOnDrop(c, auto) {
+    const f = CLAW_SECRET[machine.id];
+    if (f && f(c, auto) && hooks.secret) hooks.secret();
+  }
+
   function startClose(c) {
     const gx = c.x, gy = c.y + GRIP_Y;
     let best = null, bd = Infinity;
@@ -188,9 +200,10 @@ const ClawGame = (() => {
       case 'ready': {
         c.timer -= dt;
         const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        if (dir && dir !== c.lastDir) { if (c.lastDir) c.turns++; c.lastDir = dir; }
         c.x = clamp(c.x + dir * 170 * dt, HOME_X, RIGHT - 30);
         c.open = approach(c.open, 0.3, dt * 2);
-        if (c.timer <= 0) { c.timer = 0; c.state = 'drop'; }
+        if (c.timer <= 0) { c.timer = 0; c.state = 'drop'; secretOnDrop(c, true); }
         break;
       }
       case 'drop':
@@ -448,7 +461,7 @@ const ClawGame = (() => {
       return true;
     },
     drop() {
-      if (claw.state === 'ready') { claw.state = 'drop'; return true; }
+      if (claw.state === 'ready') { claw.state = 'drop'; secretOnDrop(claw, false); return true; }
       return false;
     },
     setInput(dir, on) { input[dir] = on; },

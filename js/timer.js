@@ -82,7 +82,10 @@ const TimerGame = (() => {
       els.sub.textContent = `목표 ${fmtT(target)} · ${hideAt()}초 뒤 숫자가 사라져요`;
       setUI(); tick();
     } else if (state === 'running') {
-      finish((performance.now() - t0) / 1000);
+      const sec = (performance.now() - t0) / 1000;
+      // 숨겨진 행동: 10초 챌린지는 1초 안에 멈추기, 럭키 타이머는 7.77초(±0.03)에 멈추기
+      if (isRandom() ? Math.abs(Math.round(sec * 100) - 777) <= 3 : sec <= 1) hooks.secret();
+      finish(sec);
     }
   }
 

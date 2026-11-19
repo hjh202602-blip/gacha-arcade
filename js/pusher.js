@@ -95,11 +95,16 @@ const PusherGame = (() => {
     }
   }
 
+  let dropTimes = [];
   function dropAt(x) {
     if (cool > 0) return;
     if (!hooks.spendCoin()) { setUI(); return; }
     cool = COOLDOWN;
     session.in++;
+    // 숨겨진 행동: 4초 안에 10번 연속 떨어뜨리기
+    const now = performance.now();
+    dropTimes = dropTimes.filter(tm => now - tm < 4000); dropTimes.push(now);
+    if (dropTimes.length >= 10) { dropTimes = []; hooks.secret(); }
     const c = coin(Math.max(L + COIN_R, Math.min(R - COIN_R, x)), face + COIN_R + 1);
     c.vy = 60;
     items.push(c);

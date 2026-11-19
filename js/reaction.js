@@ -7,6 +7,9 @@ const ReactionGame = (() => {
 
   let canvas, ctx, els, hooks, machine, loop;
   let state = 'idle', t = 0, time = 0, goAt = 0, goTime = 0, fakes = [], ms = 0, grade = null, why = '';
+  // 숨겨진 행동: 가끔 보라색 '??' 신호가 0.7초 동안 나옴. 그때 누르면 일정 확률로 히든 인형
+  let qAt = -1;
+  const qOn = () => state === 'wait' && qAt >= 0 && t >= qAt && t < qAt + 0.7;
 
   const fakeOn = () => state === 'wait' && fakes.some(f => t >= f && t < f + 0.3);
   const bestKey = () => (machine ? machine.id : 'flash');
@@ -19,6 +22,8 @@ const ReactionGame = (() => {
       const n = Math.floor(Math.random() * 3);   // 0~2번
       for (let i = 0; i < n; i++) fakes.push(0.5 + Math.random() * Math.max(0.2, goAt - 0.9));
     }
+    qAt = hooks.secretLeft() && Math.random() < 0.25 && goAt > 2 ? 0.6 + Math.random() * (goAt - 1.5) : -1;
+    if (qAt >= 0) fakes = fakes.filter(f => Math.abs(f - qAt) > 0.8);
     setUI();
   }
 
@@ -47,6 +52,7 @@ const ReactionGame = (() => {
   function press() {
     if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; why = ''; setUI(); } }
     else if (state === 'ready') begin();
+    else if (state === 'wait' && qOn()) { why = 'q'; state = 'early'; t = 0; setUI(); hooks.secret(); }
     else if (state === 'wait') { why = fakeOn() ? 'fake' : 'early'; state = 'early'; t = 0; setUI(); }
     else if (state === 'go') { why = ''; finish(Math.round(performance.now() - goTime)); }
   }
@@ -65,15 +71,16 @@ const ReactionGame = (() => {
     let col = '#3a3a48', label = 'START', sub = '';
     if (st === 'ready') { col = '#4a4a5c'; label = 'READY'; sub = '누르면 시작'; }
     if (st === 'wait') { col = fake ? '#ffd60a' : '#e8304a'; label = fake ? '?!' : '기다려…'; sub = fake ? '속지 마!' : ''; }
+    if (st === 'wait' && live && qOn()) { col = '#a24bff'; label = '??'; sub = '…?'; }
     if (st === 'go') { col = '#3ddc84'; label = '지금!'; }
     if (st === 'result') { col = grade ? GRADES[grade].color : '#6b6b80'; label = ms != null ? `${ms}ms` : '느려요!'; sub = grade ? `${grade}등급!` : '0.45초 안에 눌러야 해요'; }
-    if (st === 'early') { col = '#6b6b80'; label = why === 'fake' ? '페이크!' : '부정출발!'; sub = why === 'fake' ? '노란불에 속았어요' : '초록불이 켜진 뒤에 눌러요'; }
+    if (st === 'early') { col = why === 'q' ? '#a24bff' : '#6b6b80'; label = why === 'fake' ? '페이크!' : why === 'q' ? '??!' : '부정출발!'; sub = why === 'fake' ? '노란불에 속았어요' : why === 'q' ? '수상한 신호를 눌렀다…' : '초록불이 켜진 뒤에 눌러요'; }
 
     c.fillStyle = '#0b0b12'; c.beginPath(); c.arc(LAMP.x, LAMP.y, LAMP.r + 14, 0, 6.28); c.fill();
     const g = c.createRadialGradient(LAMP.x - 30, LAMP.y - 36, 10, LAMP.x, LAMP.y, LAMP.r);
     g.addColorStop(0, '#ffffffcc'); g.addColorStop(0.25, col); g.addColorStop(1, col);
     c.save();
-    if (st === 'go' || st === 'wait' || fake) { c.shadowColor = col; c.shadowBlur = 40; }
+    if (st === 'go' || st === 'wait' || fake || st === 'early') { c.shadowColor = col; c.shadowBlur = 40; }
     c.fillStyle = g; c.beginPath(); c.arc(LAMP.x, LAMP.y, LAMP.r, 0, 6.28); c.fill();
     c.restore();
     c.fillStyle = '#fff'; c.font = `900 ${label.length > 5 ? 40 : 52}px sans-serif`;
@@ -102,7 +109,7 @@ const ReactionGame = (() => {
       wait: ['탭!', '아직… 아직… (초록불에 탭)'],
       go: ['탭!', '지금!!'],
       result: ['...', grade ? `${ms}ms! ${grade}등급 인형 획득` : ms != null ? `${ms}ms… 아쉬워요` : '너무 늦었어요'],
-      early: ['...', why === 'fake' ? '가짜 번쩍임에 속았어요!' : '너무 빨리 눌렀어요!'],
+      early: ['...', why === 'fake' ? '가짜 번쩍임에 속았어요!' : why === 'q' ? '수상한 ?? 신호를 눌렀다…!' : '너무 빨리 눌렀어요!'],
     };
     const [label, msg] = map[state];
     els.btn.textContent = label;

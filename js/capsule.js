@@ -15,6 +15,7 @@ const CapsuleGame = (() => {
   const LUCKY_A = -Math.PI / 2, LUCKY_W = 0.3, SPIN = 7.2;
   const BOOST = { S: 5, A: 3, B: 1.5, C: 1, D: 0.6 };
   let lucky = false, a0 = 0;
+  let waitT = 0, secretDone = false;   // 숨겨진 행동: 캡슐 15초 방치 / 골든 레버 10초 넘게 돌리기
   const angDiff = (a, b) => Math.abs(((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
   function pickBoosted() {
     const pool = dollsOf(machine.id);
@@ -86,6 +87,11 @@ const CapsuleGame = (() => {
   const isLuckyM = m => m && m.gimmick === 'lucky';
   function update(dt) {
     t += dt;
+    if (state === 'tray' || state === 'spin') {
+      waitT += dt;
+      const need = state === 'tray' ? (isLucky() ? Infinity : 15) : 10;
+      if (!secretDone && waitT >= need) { secretDone = true; hooks.secret(); }
+    } else waitT = 0;
     if (state === 'spin') {
       handleA = (handleA + SPIN * dt) % (Math.PI * 2);
       for (const c of caps) if (Math.random() < 0.04) { c.vx += rand(-120, 120); c.vy -= rand(50, 200); }
@@ -268,7 +274,7 @@ const CapsuleGame = (() => {
   }
 
   function action() {
-    if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; t = 0; setUI(); } }
+    if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; t = 0; secretDone = false; setUI(); } }
     else if (state === 'ready' && isLucky()) { state = 'spin'; t = 0; lucky = false; setUI(); }
     else if (state === 'spin') {
       lucky = angDiff(handleA, LUCKY_A) <= LUCKY_W;

@@ -43,6 +43,8 @@ const StackerGame = (() => {
     }
     if (to - from <= 0) { finish(); return; }
     stack.push({ from, to });
+    // 숨겨진 행동: 첫 3층을 모두 왼쪽 벽에 붙여 쌓기
+    if (stack.length === 3 && stack.every(s => s.from === 0)) hooks.secret();
     reached = row + 1;
     flash = 1;
     if (reached >= ROWS) { finish(); return; }

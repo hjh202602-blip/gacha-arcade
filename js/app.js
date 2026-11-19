@@ -10,7 +10,7 @@ const deepFreeze = o => {
   if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); Object.values(o).forEach(deepFreeze); }
   return o;
 };
-[GRADES, GRADE_ORDER, MACHINES, BASE_DOLLS, DOLLS, PALETTES, OUTFITS, DOLL_BY_ID, MACHINE_BY_ID, REGULAR_POOL, SPECIAL_POOL].forEach(deepFreeze);
+[GRADES, GRADE_ORDER, MACHINES, BASE_DOLLS, DOLLS, PALETTES, OUTFITS, DOLL_BY_ID, MACHINE_BY_ID, REGULAR_POOL, SPECIAL_POOL, HIDDEN_DOLLS, HIDDEN_BY_MACHINE].forEach(deepFreeze);
 [ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, ReactionGame, MoleGame, MemoryGame, Kit, DollArt, SpecialState, Celebrate]
   .forEach(o => Object.freeze(o));
 Object.freeze(Math);
@@ -60,7 +60,7 @@ function sanitize(d, caps) {
   };
   for (const [id, r] of Object.entries(d.owned || {})) {
     if (!DOLL_BY_ID[id] || !r) continue;
-    out.owned[id] = { count: num(r.count, 0, countMax, 0), first: num(r.first, 0, T_MAX, Date.now()), last: num(r.last, 0, T_MAX, 0), sold: num(r.sold, 0, 1e9, 0) };
+    out.owned[id] = { count: num(r.count, 0, DOLL_BY_ID[id].hidden ? 1 : countMax, 0), first: num(r.first, 0, T_MAX, Date.now()), last: num(r.last, 0, T_MAX, 0), sold: num(r.sold, 0, 1e9, 0) };
   }
   if (Array.isArray(d.history)) out.history = d.history.filter(h => h && DOLL_BY_ID[h.id]).slice(0, 50).map(h => ({ id: h.id, t: num(h.t, 0, T_MAX, 0) }));
   for (const [k, v] of Object.entries(d.best || {})) if (/^[a-z]+$/.test(k) && Number.isFinite(+v)) out.best[k] = +v;
@@ -129,6 +129,9 @@ const baseSell = d => GRADES[d.grade].sell;
 const dailyMult = id => { const dl = save.daily; if (!dl || dl.day !== dayKey()) return 0; const p = dl.picks.find(x => x.id === id); return p ? p.mult : 0; };
 const sellPrice = d => { const m = dailyMult(d.id); return m ? Math.round(baseSell(d) * m) : baseSell(d); };
 const byGrade = (a, b) => GRADE_ORDER.indexOf(a.grade) - GRADE_ORDER.indexOf(b.grade);
+const SHELF_ORDER = ['H', ...GRADE_ORDER];   // 진열장·등급표에는 히든 등급도 보여줌
+const canSell = d => !d.hidden;
+const HIDDEN_CHANCE = 0.3;   // 숨겨진 행동을 했을 때 히든 인형이 나올 확률
 
 function toast(msg) {
   const t = $('toast');
@@ -321,8 +324,9 @@ function renderStore() {
 
 function renderGradeLegend() {
   const hint = { S: '거의 안 나오고, 집어도 잘 빠짐', A: '드물고 잘 미끄러짐', B: '꽤 까다로움', C: '조금만 집중하면 OK', D: '자주 나오고 잘 잡힘' };
-  $('grade-legend').innerHTML = GRADE_ORDER.map(g => `
-    <li><span class="grade-badge" style="${gradeStyle(g)}">${g}</span><span>${GRADES[g].name} · 판매 🪙${GRADES[g].sell}</span><span>${hint[g]}</span></li>`).join('');
+  hint.H = '기계마다 숨겨진 행동을 하면…?';
+  $('grade-legend').innerHTML = SHELF_ORDER.map(g => `
+    <li><span class="grade-badge" style="${gradeStyle(g)}">${g}</span><span>${GRADES[g].name} · ${g === 'H' ? '판매 불가 · 1번만' : `판매 🪙${GRADES[g].sell}`}</span><span>${hint[g]}</span></li>`).join('');
 }
 
 function buildLights() {
@@ -511,7 +515,20 @@ function renderLineup() {
         }).join('')}</div>
       </div>
     </li>`;
-  }).join('');
+  }).join('') + hiddenLineRow(m);
+}
+// 이 기계의 히든 인형 (얻기 전에는 실루엣)
+function hiddenLineRow(m) {
+  const h = HIDDEN_BY_MACHINE[m.id];
+  if (!h) return '';
+  const f = found(h.id);
+  return `<li class="lg-hidden" style="${gradeStyle('H')}">
+    <span class="grade-badge" style="${gradeStyle('H')}">H</span>
+    <div class="lg-body">
+      <div class="sub">히든 · ${f ? `${h.name} 발견!` : '숨겨진 행동을 하면 가끔 나와요'} · ${f ? 1 : 0}/1</div>
+      <div class="lg-dolls"><span class="lg-doll ${f ? '' : 'locked'}" title="${f ? h.name : '???'}"><img src="${DollArt.url(h)}" alt=""></span></div>
+    </div>
+  </li>`;
 }
 
 const STATUS = {
@@ -528,8 +545,20 @@ const STATUS = {
 let lastStatus = '', lastTimer = '', lastPlaying = null;
 function playSection(m) { return document.querySelector(`[data-view="play-${m.type}"]`); }
 
+// 숨겨진 행동을 했을 때: 아직 못 얻은 히든 인형이면 일정 확률로 지급 (딱 한 번만)
+function secret() {
+  const m = currentMachine;
+  const h = m && HIDDEN_BY_MACHINE[m.id];
+  if (!h || found(h.id) || !recentMachines.includes(m.id)) return false;
+  if (Math.random() >= HIDDEN_CHANCE) return false;
+  giveDoll(h, '🤫 숨겨진 행동 발견!');
+  return true;
+}
+const secretLeft = () => { const h = currentMachine && HIDDEN_BY_MACHINE[currentMachine.id]; return !!h && !found(h.id); };
+
 // 인형을 진열장에 넣기 (뽑기 당첨, 오늘의 인형 구매)
 function giveDoll(doll, note) {
+  if (doll.hidden && save.owned[doll.id]) return;   // 히든 인형은 한 번만
   const first = !save.owned[doll.id];
   const now = Date.now();
   const rec = save.owned[doll.id] || { count: 0, first: now };
@@ -541,7 +570,7 @@ function giveDoll(doll, note) {
   renderLineup();
   renderNavCount();
   if (currentView === 'store') renderStore();
-  const head = first ? '🎉 새로운 인형 획득! 진열장에 전시됐어요' : `🎉 인형 획득! (보유 ${rec.count}개)`;
+  const head = doll.hidden ? '히든 인형을 찾았어요! (단 하나뿐, 판매 불가)' : first ? '🎉 새로운 인형 획득! 진열장에 전시됐어요' : `🎉 인형 획득! (보유 ${rec.count}개)`;
   queueModal({ ...dollModal(doll, note ? `${note} · ${head}` : head), fx: { grade: doll.grade, isNew: first } });
 }
 // 기계에서 당첨: 방금 열었던 기계의 인형만 인정
@@ -559,6 +588,7 @@ function spendCoin() {
 
 ClawGame.init($('claw-canvas'), {
   spendCoin,
+  secret,
   onWin: doll => award(doll),
   onGrab(q, zone) {
     $('claw-status').textContent = zone === 'center' ? '정중앙! 꽉 잡았다' : zone === 'near' ? '아깝다, 살짝 빗나갔다… 걸릴까?' : '옆을 건드렸다! 밀려난다';
@@ -586,6 +616,8 @@ ClawGame.init($('claw-canvas'), {
 
 // 캡슐 / 펀치 / 10초 등 다른 기계
 const gameHooks = Object.freeze({
+  secret,
+  secretLeft,
   // 지금 기계를 몇 번 할 수 있는지 (기계마다 1회 가격이 다름)
   coins: () => Math.floor(save.coins / priceOf(currentMachine)),
   spendCoin,
@@ -668,6 +700,7 @@ function renderShelf() {
   const uniq = DOLLS.filter(d => found(d.id)).length;
   const total = DOLLS.reduce((s, d) => s + ownedCount(d.id), 0);
   const sCount = DOLLS.filter(d => d.grade === 'S' && found(d.id)).length;
+  const hCount = HIDDEN_DOLLS.filter(d => found(d.id)).length;
   const dupes = DOLLS.reduce((s, d) => s + Math.max(0, ownedCount(d.id) - 1), 0);
   const dupeValue = DOLLS.reduce((s, d) => s + Math.max(0, ownedCount(d.id) - 1) * sellPrice(d), 0);
   $('sell-info').textContent = dupes
@@ -677,25 +710,26 @@ function renderShelf() {
   $('shelf-stats').innerHTML = `
     <div class="stat"><b>${uniq} / ${DOLLS.length}</b>도감 수집</div>
     <div class="stat"><b>${total}</b>보유 인형 수</div>
-    <div class="stat"><b>${sCount} / ${DOLLS.filter(d => d.grade === 'S').length}</b>전설 등급</div>`;
+    <div class="stat"><b>${sCount} / ${DOLLS.filter(d => d.grade === 'S').length}</b>전설 등급</div>
+    <div class="stat hidden-stat"><b>${hCount} / ${HIDDEN_DOLLS.length}</b>히든</div>`;
 
-  const tabs = [{ id: 'all', name: '전체' }, { id: 'special', name: '✨ 특별' }, ...MACHINES];
+  const tabs = [{ id: 'all', name: '전체' }, { id: 'hidden', name: '🤫 히든' }, { id: 'special', name: '✨ 특별' }, ...MACHINES];
   $('shelf-tabs').innerHTML = tabs.map(t => `<button data-tab="${t.id}" class="${t.id === shelfTab ? 'on' : ''}">${t.name}</button>`).join('');
 
-  const list = DOLLS.filter(d => shelfTab === 'all' || (shelfTab === 'special' ? d.special : d.machine === shelfTab));
+  const list = shelfList();
   const recent = new Set(save.history.slice(0, 3).map(h => h.id));
-  $('shelf-body').innerHTML = GRADE_ORDER.map(g => {
+  $('shelf-body').innerHTML = SHELF_ORDER.map(g => {
     const row = list.filter(d => d.grade === g);
     if (!row.length) return '';
     const got = row.filter(d => found(d.id)).length;
     return `<div class="grade-row">
-      <h3><span class="grade-badge" style="${gradeStyle(g)}">${g}</span>${GRADES[g].name} <small>${got} / ${row.length} · 판매가 🪙${GRADES[g].sell}</small></h3>
+      <h3><span class="grade-badge" style="${gradeStyle(g)}">${g}</span>${GRADES[g].name} <small>${got} / ${row.length} · ${g === 'H' ? '판매 불가 · 기계마다 단 하나' : `판매가 🪙${GRADES[g].sell}`}</small></h3>
       <div class="plank">${row.map(d => {
         const n = ownedCount(d.id), f = found(d.id);
         const cls = !f ? 'locked' : n ? '' : 'sold';
         const q = bulk ? bulkQty(d) : 0;
         const pick = bulk ? (q ? `pick ${bulk.sel.has(d.id) ? 'on' : ''}` : 'nopick') : '';
-        return `<button class="doll-card ${cls} ${pick} ${n && recent.has(d.id) ? 'new' : ''} ${d.special ? 'sp' : ''}" data-doll="${d.id}" title="${f ? d.name : '아직 못 뽑은 인형'}">
+        return `<button class="doll-card ${cls} ${pick} ${n && recent.has(d.id) ? 'new' : ''} ${d.special ? 'sp' : ''} ${d.hidden ? 'hd' : ''}" data-doll="${d.id}" title="${f ? d.name : '아직 못 뽑은 인형'}">
           ${bulk && q ? `<span class="pick-mark">${bulk.sel.has(d.id) ? '✔' : ''}</span><span class="pick-qty">${q}개 · 🪙${q * sellPrice(d)}</span>` : ''}
           ${n > 1 ? `<span class="cnt">x${n}</span>` : ''}
           ${dailyMult(d.id) ? `<span class="boost">🔥x${dailyMult(d.id).toFixed(1)}</span>` : ''}
@@ -737,8 +771,8 @@ $('shelf-body').addEventListener('click', e => {
 // ================= 일괄 판매 =================
 // 진열장에서 여러 인형을 골라 한 번에 팔기. '종류마다 1개 남기기'를 끄면 마지막 1개까지 판다
 let bulk = null;   // { sel: Set<dollId>, keep: boolean }
-const bulkQty = d => Math.max(0, ownedCount(d.id) - (bulk && bulk.keep ? 1 : 0));
-const shelfList = () => DOLLS.filter(d => shelfTab === 'all' || (shelfTab === 'special' ? d.special : d.machine === shelfTab));
+const bulkQty = d => (canSell(d) ? Math.max(0, ownedCount(d.id) - (bulk && bulk.keep ? 1 : 0)) : 0);
+const shelfList = () => DOLLS.filter(d => shelfTab === 'all' || (shelfTab === 'special' ? d.special : shelfTab === 'hidden' ? d.hidden : d.machine === shelfTab));
 function renderBulk() {
   $('bulk-bar').hidden = !bulk;
   $('bulk-start').hidden = !!bulk;
@@ -799,8 +833,12 @@ function openDollDetail(d) {
   const rec = save.owned[d.id];
   if (!rec) {
     const m = MACHINE_BY_ID[d.machine];
-    const where = d.special ? `특별 뽑기 때 '${m.name}' 기계에서만 나와요` : `'${m.name}' 기계에서 뽑을 수 있어요${isUnlocked(m) ? '' : ' (잠김)'}`;
-    showModal({ ...dollModal(d, where), locked: true, name: '???', desc: '아직 정체를 알 수 없는 인형이에요.' });
+    const where = d.hidden ? `'${m.name}'의 히든 인형 · 힌트: ${d.hint}` : d.special ? `특별 뽑기 때 '${m.name}' 기계에서만 나와요` : `'${m.name}' 기계에서 뽑을 수 있어요${isUnlocked(m) ? '' : ' (잠김)'}`;
+    showModal({ ...dollModal(d, where), locked: true, name: '???', desc: d.hidden ? '평범하지 않은 행동을 하면 가끔 나타난대요.' : '아직 정체를 알 수 없는 인형이에요.' });
+    return;
+  }
+  if (d.hidden) {
+    showModal({ ...dollModal(d, `🤫 히든 인형 · 판매할 수 없어요 · 찾은 날 ${fmtTime(rec.first)}`), buttons: [{ label: '닫기', cls: 'primary' }] });
     return;
   }
   const p = sellPrice(d), n = rec.count, m = dailyMult(d.id);
@@ -816,6 +854,7 @@ function openDollDetail(d) {
 }
 
 function sellDoll(d, n) {
+  if (!canSell(d)) return;
   const rec = save.owned[d.id];
   n = Math.min(n, rec ? rec.count : 0);
   if (n <= 0) return;
@@ -828,7 +867,7 @@ function sellDoll(d, n) {
 }
 
 $('sell-dupes').onclick = () => {
-  const list = DOLLS.filter(d => ownedCount(d.id) > 1);
+  const list = DOLLS.filter(d => canSell(d) && ownedCount(d.id) > 1);
   if (!list.length) return;
   const n = list.reduce((s, d) => s + ownedCount(d.id) - 1, 0);
   const v = list.reduce((s, d) => s + (ownedCount(d.id) - 1) * sellPrice(d), 0);
@@ -837,7 +876,7 @@ $('sell-dupes').onclick = () => {
     name: `${n}개 팔기`, msg: `🪙 ${v}코인을 받아요`, desc: '종류마다 1개씩은 진열장에 남겨요.',
     buttons: [
       { label: `모두 팔기 (+${v}코인)`, cls: 'gold', fn: () => {
-        const now = DOLLS.filter(d => ownedCount(d.id) > 1);
+        const now = DOLLS.filter(d => canSell(d) && ownedCount(d.id) > 1);
         const value = now.reduce((s, d) => s + (ownedCount(d.id) - 1) * sellPrice(d), 0);
         now.forEach(d => { const r = save.owned[d.id]; r.sold = (r.sold || 0) + r.count - 1; r.count = 1; });
         save.coins += value; persist(); renderCoins(); bumpWallet(); renderShelf();
@@ -857,7 +896,7 @@ function dollModal(d, msg) {
   return { img: DollArt.url(d), color: GRADES[d.grade].color, badge: `${d.grade} · ${GRADES[d.grade].name}${d.special ? ' · ✨특별' : ''}`, name: d.name, msg, desc: d.desc };
 }
 // 등급별 당첨 연출: D~B는 바로 터지고, A·S는 실루엣으로 두근두근 모였다가 공개
-const HYPE = { S: '★ LEGEND ★', A: 'AMAZING!!', B: 'GREAT!', C: 'NICE!', D: 'GET!' };
+const HYPE = { H: '??? HIDDEN ???', S: '★ LEGEND ★', A: 'AMAZING!!', B: 'GREAT!', C: 'NICE!', D: 'GET!' };
 function showModal(spec) {
   const card = document.querySelector('.modal-card');
   clearTimeout(showModal.timer);
@@ -1006,10 +1045,10 @@ const DEV_ACTIONS = {
     for (const d of DOLLS) { const r = save.owned[d.id] || { count: 0, first: now, last: now }; r.count = Math.max(1, r.count); save.owned[d.id] = r; }
     persist(); renderNavCount(); refreshAll();
   },
-  // 당첨 연출 미리보기 (인형은 주지 않음): 누를 때마다 D → C → B → A → S
+  // 당첨 연출 미리보기 (인형은 주지 않음): 누를 때마다 D → C → B → A → S → H
   fxDemo: () => {
-    const g = GRADE_ORDER[4 - (fxDemoStep++ % 5)];
-    const d = BASE_DOLLS.find(x => x.grade === g);
+    const g = ['D', 'C', 'B', 'A', 'S', 'H'][fxDemoStep++ % 6];
+    const d = g === 'H' ? HIDDEN_DOLLS[0] : BASE_DOLLS.find(x => x.grade === g);
     showModal({ ...dollModal(d, '개발자 모드 연출 미리보기 (인형은 지급되지 않아요)'), fx: { grade: g, isNew: true } });
   },
   resetSave: () => showModal({

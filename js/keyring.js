@@ -7,7 +7,7 @@ const KeyringGame = (() => {
 
   let canvas, ctx, els, hooks, machine, loop;
   let items = [], state = 'idle', t = 0, time = 0, hookY = HOOK_REST, caught = null, result = '';
-  let beltPos = 0;
+  let beltPos = 0, readyT = 0, secretDone = false;
   // 지그재그 키링: 벨트 속도가 출렁이다가 거꾸로도 감
   const beltSpeed = () => (machine && machine.gimmick === 'zigzag'
     ? BELT_SPEED * (Math.sin(time * 0.8) * 1.7 + Math.sin(time * 2.3) * 0.5)
@@ -36,6 +36,11 @@ const KeyringGame = (() => {
       if (it.x > W + 60) Object.assign(it, makeItem(it.x - SPAN));
       else if (it.x < W + 60 - SPAN) Object.assign(it, makeItem(it.x + SPAN));
     }
+    if (state === 'ready') {
+      // 숨겨진 행동(열쇠고리 걸기): 발사하지 않고 15초 구경하기
+      readyT += dt;
+      if (machine.gimmick !== 'zigzag' && !secretDone && readyT >= 15) { secretDone = true; hooks.secret(); }
+    }
     if (state === 'shoot') {
       hookY -= SHOOT * dt;
       // 갈고리 끝이 고리 높이를 지나는 순간 판정
@@ -46,7 +51,11 @@ const KeyringGame = (() => {
           if (Math.abs(ringX(it) - HOOK_X) < it.r - TIP) { caught = it; break; }
         }
       }
-      if (caught) { state = 'pull'; t = 0; result = 'hit'; setUI(); }
+      if (caught) {
+        // 숨겨진 행동(지그재그): 벨트가 거꾸로 갈 때 걸기
+        if (machine.gimmick === 'zigzag' && beltSpeed() < 0) hooks.secret();
+        state = 'pull'; t = 0; result = 'hit'; setUI();
+      }
       else if (hookY <= BELT_Y + 14) { hookY = BELT_Y + 14; state = 'miss'; t = 0; result = 'miss'; setUI(); }
     } else if (state === 'pull') {
       hookY = Math.min(HOOK_REST + 40, hookY + PULL * dt);
@@ -151,7 +160,7 @@ const KeyringGame = (() => {
   }
 
   function action() {
-    if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; setUI(); } }
+    if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; readyT = 0; secretDone = false; setUI(); } }
     else if (state === 'ready') {
       items.forEach(it => { it.checked = false; });
       state = 'shoot'; t = 0; setUI();

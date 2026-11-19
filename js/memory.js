@@ -12,6 +12,7 @@ const MemoryGame = (() => {
 
   let canvas, ctx, els, hooks, machine, loop;
   let state = 'idle', t = 0, seq = [], step = 0, lit = -1, litT = 0, cleared = 0, grade = null, wrong = -1;
+  let showTaps = 0, secretDone = false;   // 숨겨진 행동: 보여주는 중에 버튼 다섯 번 누르기
 
   const bestKey = () => (machine ? machine.id : 'melody');
   const stepTime = () => Math.max(0.28, 0.62 - seq.length * 0.025);
@@ -49,6 +50,11 @@ const MemoryGame = (() => {
   }
 
   function tap(i) {
+    if (state === 'show') {
+      lit = i; litT = 0.12;
+      if (!secretDone && ++showTaps >= 5) { secretDone = true; hooks.secret(); }
+      return;
+    }
     if (state !== 'input') return;
     flash(i, 0.22);
     if (seq[step] !== i) { wrong = i; finish(); return; }
@@ -121,7 +127,7 @@ const MemoryGame = (() => {
   }
   function action() {
     if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; setUI(); } }
-    else if (state === 'ready') { seq = []; cleared = 0; grade = null; wrong = -1; nextRound(); }
+    else if (state === 'ready') { seq = []; cleared = 0; grade = null; wrong = -1; showTaps = 0; secretDone = false; nextRound(); }
   }
 
   return {
@@ -131,7 +137,7 @@ const MemoryGame = (() => {
       loop = Kit.loop(update, draw);
       canvas.addEventListener('pointerdown', onPointer);
       document.addEventListener('keydown', ev => {
-        if (state === 'input' && canvas.offsetParent && /^[1-4]$/.test(ev.key)) tap(+ev.key - 1);
+        if ((state === 'input' || state === 'show') && canvas.offsetParent && /^[1-4]$/.test(ev.key)) tap(+ev.key - 1);
       });
     },
     open(m) {

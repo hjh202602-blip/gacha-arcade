@@ -15,7 +15,7 @@ const PunchGame = (() => {
   let state = 'idle', t = 0, p = 0, v = 0, speed = 2, score = 0, shown = 0, grade = null;
   let padUp = 0, hit = 0, shake = 0;
   // 삼연타 펀치: 세 번 치고 평균 점수로 판정. 칠 때마다 게이지가 25% 빨라짐
-  let hits = [];
+  let hits = [], secretDone = false;
   const isCombo = () => machine && machine.gimmick === 'combo';
   const bestKey = () => (machine ? machine.id : 'punch');
 
@@ -29,6 +29,8 @@ const PunchGame = (() => {
     shake = Math.max(0, shake - dt * 3);
 
     if (state === 'ready') {
+      // 숨겨진 행동(펀치 챔피언): 펀치하지 않고 10초 참기
+      if (!isCombo() && !secretDone && t >= 10) { secretDone = true; hooks.secret(); }
       p = (p + dt * speed) % 2;
       v = 1 - Math.abs(p - 1);
     } else if (state === 'punch') {
@@ -40,7 +42,11 @@ const PunchGame = (() => {
         state = 'ready'; t = 0; speed *= 1.25; p = Math.random() * 2; v = 1 - Math.abs(p - 1);
         setUI();
       } else if (t >= 1.3) {
-        if (isCombo()) { hits.push(score); score = Math.round(hits.reduce((a, b) => a + b, 0) / hits.length); }
+        if (isCombo()) {
+          hits.push(score);
+          if (hits.every(h => h < 150)) hooks.secret();   // 숨겨진 행동(삼연타): 세 번 모두 아주 살살
+          score = Math.round(hits.reduce((a, b) => a + b, 0) / hits.length);
+        }
         shown = score; state = 'result'; t = 0;
         const g = THRESH.find(([, s]) => score >= s);
         grade = g ? g[0] : null;
@@ -193,7 +199,7 @@ const PunchGame = (() => {
   function action() {
     if (state === 'idle') {
       if (hooks.spendCoin()) {
-        state = 'ready'; t = 0; shown = 0; grade = null; hits = [];
+        state = 'ready'; t = 0; shown = 0; grade = null; hits = []; secretDone = false;
         p = Math.random() * 2; v = 1 - Math.abs(p - 1); speed = newSpeed();
         setUI();
       }

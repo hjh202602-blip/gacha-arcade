@@ -31,11 +31,11 @@ const ScissorsGame = (() => {
       sx += SPEED * 1.25 * speedMul * dir * dt;
       if (sx >= END_X || sx <= START_X) {
         sx = Math.max(START_X, Math.min(END_X, sx)); dir = -dir; bounces++; speedMul *= 1.18;
-        if (bounces >= 6) doCut();   // 너무 오래 끌면 자동으로 싹둑
+        if (bounces >= 6) { hooks.secret(); doCut(); }   // 너무 오래 끌면 자동으로 싹둑 (숨겨진 행동)
       }
     } else if (state === 'move') {
       sx += SPEED * dt;
-      if (sx >= END_X) { sx = END_X; doCut(); }
+      if (sx >= END_X) { sx = END_X; hooks.secret(); doCut(); }   // 끝까지 보내기 (숨겨진 행동)
     } else if (state === 'falling') {
       const f = cut.fall;
       f.vy += 1500 * dt; f.y += f.vy * dt; f.a += dt * 3;

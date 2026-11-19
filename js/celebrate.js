@@ -1,7 +1,8 @@
 // 당첨 연출: 등급이 높을수록 더 화려하게 (꽃가루 · 반짝이 · 폭죽 · 번쩍임 · 흔들림 · 효과음)
 const Celebrate = (() => {
-  const LV = { D: 0, C: 1, B: 2, A: 3, S: 4 };
+  const LV = { D: 0, C: 1, B: 2, A: 3, S: 4, H: 4 };
   const COLORS = {
+    H: ['#ff4fd8', '#a24bff', '#ffffff', '#7dffd9', '#2a0f5c'],
     S: ['#ffd23f', '#fff3a8', '#ff9f1c', '#ffffff', '#ff6fae', '#5ee6ff'],
     A: ['#ff8c42', '#ffd23f', '#ffffff', '#ff6fae'],
     B: ['#c77dff', '#e0aaff', '#ffffff', '#5ee6ff'],

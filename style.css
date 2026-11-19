@@ -1021,3 +1021,28 @@ button:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, va
 .doll-card.pick.on .pick-mark { background: var(--yellow); animation: badgePop .35s var(--spring); }
 .pick-qty { display: block; font-size: 11px; font-weight: 800; color: var(--yellow); }
 .doll-card.pick.new::before, .doll-card.nopick.new::before { display: none; }
+
+/* ================= 히든 등급 ================= */
+.fx-H .modal-rays { opacity: 1; animation-duration: 3s; inset: -110px;
+  background: repeating-conic-gradient(from 0deg, #ff4fd8aa 0 7deg, transparent 7deg 18deg, #7dffd9aa 18deg 25deg, transparent 25deg 36deg); }
+.fx-H .modal-stage::before {
+  content: ""; position: absolute; inset: -80px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #a24bff66, transparent 65%); animation: glowPulse 1.2s ease-in-out infinite;
+}
+.modal-card.fx-H {
+  background: radial-gradient(circle at 50% 30%, #3c1170, #12051f 75%);
+  box-shadow: 0 0 0 3px #ff4fd8, 0 0 0 8px #a24bff55, 0 0 120px #a24bff, 0 0 220px #ff4fd888;
+}
+.modal-card.fx-H.revealed { animation: zoom .5s var(--spring), hGlow 1.4s .5s ease-in-out infinite; }
+@keyframes hGlow { 50% { box-shadow: 0 0 0 3px #7dffd9, 0 0 0 10px #ff4fd866, 0 0 160px #ff4fd8, 0 0 280px #a24bffaa; } }
+.fx-H .modal-hype { font-size: 32px; background: linear-gradient(90deg, #ff4fd8, #7dffd9, #a24bff, #ff4fd8); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 1.5px #2a0f5c; text-shadow: none;
+  filter: drop-shadow(0 0 12px #ff4fd8); }
+.fx-H.revealed .modal-hype { animation: hypeIn .7s var(--spring), aurora 1.2s linear infinite; }
+.fx-H.revealed #modal-grade { animation: badgePop .6s var(--spring), glowPulse 1.2s .6s ease-in-out infinite; }
+
+.lineup li.lg-hidden { background: linear-gradient(110deg, rgba(162,75,255,.18), rgba(255,79,216,.1)); }
+.doll-card.hd { background: linear-gradient(160deg, rgba(162,75,255,.16), rgba(255,79,216,.1)); }
+.doll-card.hd.locked img { filter: brightness(0) drop-shadow(0 0 6px #a24bff) opacity(.7); }
+.stat.hidden-stat b { color: #ff9cf0; }
+@media (max-width: 620px) { .fx-H .modal-hype { font-size: 24px; } }

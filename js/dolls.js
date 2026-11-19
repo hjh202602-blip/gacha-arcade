@@ -7,6 +7,8 @@ const GRADES = {
   B: { name: '어려움',     color: '#c77dff', sell: 6, weight: 14,  hold: 0.75, slip: 0.55, r: 26 },
   C: { name: '보통',       color: '#5bc0eb', sell: 3, weight: 30,  hold: 0.9,  slip: 0.4,  r: 25 },
   D: { name: '쉬움',       color: '#8bd17c', sell: 1, weight: 50,  hold: 1.0,  slip: 0.25, r: 24 },
+  // 히든: 기계마다 숨겨진 행동을 했을 때만 일정 확률로 나옴. 한 번만 얻을 수 있고 팔 수 없음
+  H: { name: '히든',       color: '#ff4fd8', sell: 0, weight: 0,   hold: 0.8,  slip: 0.3,  r: 26 },
 };
 const GRADE_ORDER = ['S', 'A', 'B', 'C', 'D'];
 
@@ -362,6 +364,8 @@ const BASE_DOLLS = [
     shape: 'round', color: '#3d7bff', belly: '#bcd2ff', ears: 'round', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['crown', 'belt', 'gloves', 'sparkles'], accent: '#ffd23f' },
 ];
 
+const MACHINE_BY_ID_PRE = Object.fromEntries(MACHINES.map(m => [m.id, m.name]));
+
 // ================= 조합 인형 =================
 // 기본 인형 + (색 바꾸기 | 옷·모자 입히기)로 데이터 몇 줄만으로 인형 수를 늘린다
 const PALETTES = [
@@ -419,10 +423,42 @@ const SPECIAL_DOLLS = BASE_DOLLS.map((b, i) => {
   };
 });
 
-const DOLLS = [...BASE_DOLLS, ...VARIANT_DOLLS, ...SPECIAL_DOLLS];
+// ================= 히든 인형 =================
+// hint: 진열장에서 못 얻은 히든 인형을 누르면 보여주는 힌트
+const HIDDEN_DOLLS = [
+  ['animal', '출구지기곰', '출구 위에서 집게를 내려 보면…', { shape: 'round', ears: 'round', eyes: 'sleepy', mouth: 'smile', extras: ['halo'] }],
+  ['dessert', '느긋푸딩', '시간이 다 될 때까지 가만히 기다리면…', { shape: 'round', ears: 'none', eyes: 'sleepy', mouth: 'o', extras: ['cream', 'halo'], cream: '#2b1d2a' }],
+  ['space', '벽타는외계인', '오른쪽 끝 벽에 바짝 붙어서 내리면…', { shape: 'tall', ears: 'antenna', accent: '#7dffd9', eyes: 'one', mouth: 'smile' }],
+  ['treasure', '갈팡문어', '좌우로 열 번 넘게 갈팡질팡하다 내리면…', { shape: 'round', ears: 'none', eyes: 'happy', mouth: 'o', extras: ['tentacles', 'eyepatch'] }],
+  ['capsule', '잠꾸러기캡슐', '나온 캡슐을 열지 않고 한참 두면…', { shape: 'tall', ears: 'none', eyes: 'sleepy', mouth: 'w', extras: ['capdots', 'cream'], cream: '#ffffff' }],
+  ['luckycap', '빙글여우', '레버를 멈추지 않고 오래오래 돌리면…', { shape: 'round', ears: 'cat', eyes: 'happy', mouth: 'cat', extras: ['sparkles'] }],
+  ['punch', '참을인곰', '펀치하지 않고 10초 동안 꾹 참으면…', { shape: 'wide', ears: 'round', eyes: 'sleepy', mouth: 'smile', extras: ['gloves', 'halo'], accent: '#ffffff' }],
+  ['combopunch', '살살펀치', '세 번 모두 아주 살살(150점 미만) 치면…', { shape: 'round', ears: 'smallround', eyes: 'happy', mouth: 'w', extras: ['gloves'], accent: '#ffc1d3' }],
+  ['timer', '성급째깍', '시작하자마자 1초 안에 멈추면…', { shape: 'round', ears: 'none', eyes: 'sparkle', mouth: 'o', extras: ['clock', 'sparkles'] }],
+  ['randtimer', '럭키세븐', '목표와 상관없이 7.77초에 멈추면…', { shape: 'round', ears: 'cat', eyes: 'sparkle', mouth: 'cat', extras: ['clock', 'crown'] }],
+  ['keyring', '멍때림고리', '발사하지 않고 15초 동안 구경만 하면…', { shape: 'wide', ears: 'none', eyes: 'sleepy', mouth: 'o', extras: ['keyring'] }],
+  ['zigzag', '거꾸로키링', '벨트가 거꾸로 갈 때 고리를 걸면…', { shape: 'round', ears: 'bunny', eyes: 'happy', mouth: 'w', extras: ['keyring', 'sparkles'] }],
+  ['keymaster', '구석열쇠', '열쇠를 왼쪽 위 구석에 꽂으면…', { shape: 'round', ears: 'none', eyes: 'dot', mouth: 'smile', extras: ['keyring', 'starmark'] }],
+  ['slidekey', '바닥열쇠', '열쇠를 맨 아래 바닥에 꽂으면…', { shape: 'wide', ears: 'smallround', eyes: 'dot', mouth: 'fang', extras: ['keyring', 'glasses'] }],
+  ['scissors', '끝까지가위', '손을 떼지 않고 가위를 끝까지 보내면…', { shape: 'tall', ears: 'horns', eyes: 'sparkle', mouth: 'fang', extras: ['leaf'] }],
+  ['pingpong', '어질어질콩', '자르지 않고 여섯 번 튕길 때까지 두면…', { shape: 'round', ears: 'none', eyes: 'one', mouth: 'o', extras: ['spots'] }],
+  ['stacker', '벽쟁이블록', '첫 3층을 모두 왼쪽 벽에 붙여 쌓으면…', { shape: 'wide', ears: 'none', eyes: 'dot', mouth: 'smile', extras: ['headband'], accent: '#7dffd9' }],
+  ['pusher', '와르르동전', '코인을 아주 빠르게 10번 연속 떨어뜨리면…', { shape: 'round', ears: 'round', eyes: 'sparkle', mouth: 'smile', extras: ['belt', 'starmark'] }],
+  ['flash', '물음표번개', '가끔 나오는 ?? 신호에 눌러 보면…', { shape: 'round', ears: 'antenna', accent: '#ffd60a', eyes: 'sparkle', mouth: 'o', extras: ['sparkles'] }],
+  ['mole', '폭탄수집가', '한 판에 폭탄을 세 번 누르면…', { shape: 'round', ears: 'smallround', eyes: 'happy', mouth: 'fang', extras: ['hat'] }],
+  ['melody', '참견음표', '순서를 보여주는 중에 버튼을 다섯 번 누르면…', { shape: 'round', ears: 'none', eyes: 'happy', mouth: 'w', extras: ['wings', 'starmark'] }],
+].map(([machine, name, hint, look]) => ({
+  id: `hd_${machine}`, machine, grade: 'H', hidden: true, name, hint, cheeks: true,
+  color: 'mystic', belly: undefined, inner: '#ff9cf0',
+  desc: `${MACHINE_BY_ID_PRE[machine]}의 숨겨진 인형. 평범하지 않은 행동을 한 사람에게만 나타난다.`,
+  ...look,
+}));
+
+const DOLLS = [...BASE_DOLLS, ...VARIANT_DOLLS, ...SPECIAL_DOLLS, ...HIDDEN_DOLLS];
+const HIDDEN_BY_MACHINE = Object.fromEntries(HIDDEN_DOLLS.map(d => [d.machine, d]));
 const DOLL_BY_ID = Object.fromEntries(DOLLS.map(d => [d.id, d]));
 const MACHINE_BY_ID = Object.fromEntries(MACHINES.map(m => [m.id, m]));
-const REGULAR_POOL = Object.fromEntries(MACHINES.map(m => [m.id, DOLLS.filter(d => d.machine === m.id && !d.special)]));
+const REGULAR_POOL = Object.fromEntries(MACHINES.map(m => [m.id, DOLLS.filter(d => d.machine === m.id && !d.special && !d.hidden)]));
 const SPECIAL_POOL = Object.fromEntries(MACHINES.map(m => [m.id, SPECIAL_DOLLS.filter(d => d.machine === m.id)]));
 
 // 지금 특별 뽑기 중인 기계 (app.js가 시간표에 맞춰 바꿈)
@@ -480,7 +516,7 @@ const DollArt = (() => {
     const f = v => Math.round(v + (t - v) * p);
     return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
   }
-  const baseColor = d => (d.color === 'rainbow' ? '#b28dff' : d.color === 'galaxy' ? '#4b3bb0' : d.color === 'aurora' ? '#9fc8ff' : d.color);
+  const baseColor = d => (d.color === 'rainbow' ? '#b28dff' : d.color === 'galaxy' ? '#4b3bb0' : d.color === 'aurora' ? '#9fc8ff' : d.color === 'mystic' ? '#8a3cff' : d.color);
 
   function circle(c, x, y, r) { c.beginPath(); c.arc(x, y, r, 0, TAU); }
   function ellipse(c, x, y, rx, ry, rot = 0) { c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, TAU); }
@@ -498,6 +534,11 @@ const DollArt = (() => {
     if (d.color === 'rainbow') {
       const g = c.createLinearGradient(CX, CY - ry, CX, CY + ry);
       ['#ff6b6b', '#ffb347', '#ffe66d', '#7ee081', '#5bc0eb', '#b28dff'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
+      return g;
+    }
+    if (d.color === 'mystic') {   // 히든: 보랏빛 소용돌이
+      const g = c.createRadialGradient(CX - 10, CY - 12, 3, CX, CY, rx + 4);
+      g.addColorStop(0, '#ff9cf0'); g.addColorStop(0.45, '#a24bff'); g.addColorStop(1, '#2a0f5c');
       return g;
     }
     if (d.color === 'aurora') {

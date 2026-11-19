@@ -8,7 +8,7 @@ const MoleGame = (() => {
   const HIT_R = 50;
 
   let canvas, ctx, els, hooks, machine, loop;
-  let state = 'idle', t = 0, time = 0, moles = [], spawned = 0, hits = 0, next = 0, grade = null, pops = [];
+  let state = 'idle', t = 0, time = 0, moles = [], spawned = 0, hits = 0, next = 0, grade = null, pops = [], bombs = 0;
 
   const progress = () => spawned / TOTAL;
   const bestKey = () => (machine ? machine.id : 'mole');
@@ -61,7 +61,10 @@ const MoleGame = (() => {
       return;
     }
     m.hit = true; m.life = m.t;
-    if (m.bomb) { hits = Math.max(0, hits - 2); pops.push({ x: HOLES[i][0], y: HOLES[i][1] - 40, txt: '-2 💥', col: '#ff5c5c', t: 0 }); }
+    if (m.bomb) {
+      bombs++;
+      if (bombs === 3) hooks.secret();   // 숨겨진 행동: 한 판에 폭탄 세 번 누르기
+      hits = Math.max(0, hits - 2); pops.push({ x: HOLES[i][0], y: HOLES[i][1] - 40, txt: '-2 💥', col: '#ff5c5c', t: 0 }); }
     else { hits++; pops.push({ x: HOLES[i][0], y: HOLES[i][1] - 40, txt: '+1', col: '#ffe066', t: 0 }); }
   }
 
@@ -162,7 +165,7 @@ const MoleGame = (() => {
   }
   function action() {
     if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; setUI(); } }
-    else if (state === 'ready') { state = 'count'; t = 0; moles = []; spawned = 0; hits = 0; grade = null; setUI(); }
+    else if (state === 'ready') { state = 'count'; t = 0; moles = []; spawned = 0; hits = 0; bombs = 0; grade = null; setUI(); }
   }
 
   return {

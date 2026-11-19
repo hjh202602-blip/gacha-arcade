@@ -135,7 +135,11 @@ const KeymasterGame = (() => {
     if (state === 'idle') {
       if (hooks.spendCoin()) { state = 'moveX'; kx = X_MIN; dx = 1; ky = Y_MIN; dy = 1; t = 0; setUI(); }
     } else if (state === 'moveX') { state = 'moveY'; setUI(); }
-    else if (state === 'moveY') { state = 'insert'; t = 0; setUI(); }
+    else if (state === 'moveY') {
+      // 숨겨진 행동: 키 마스터는 왼쪽 위 구석, 미끄럼 키 마스터는 맨 아래 바닥에 꽂기
+      if (isSlide() ? ky >= Y_MAX - 10 : kx <= X_MIN + 12 && ky <= Y_MIN + 12) hooks.secret();
+      state = 'insert'; t = 0; setUI();
+    }
   }
 
   return {
