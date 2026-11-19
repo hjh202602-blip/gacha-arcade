@@ -14,6 +14,7 @@
       <a href="#/" data-nav="store">매장</a>
       <a href="#/shelf" data-nav="shelf">내 인형 진열장 <span class="badge" id="nav-count">0</span></a>
     </nav>
+    <button class="sound-btn" id="sound-btn" aria-label="효과음 켜기/끄기" title="효과음">🔊</button>
     <div class="wallet" title="보유 코인">🪙 <span id="coin-count">0</span></div>
   </header>
 
@@ -356,7 +357,9 @@
 
   <div class="modal" id="modal" hidden>
     <div class="modal-card">
-      <img class="modal-doll" id="modal-img" alt="">
+      <div class="modal-hype" id="modal-hype"></div>
+      <div class="modal-new" id="modal-new" hidden>NEW!</div>
+      <div class="modal-stage"><div class="modal-rays"></div><img class="modal-doll" id="modal-img" alt=""></div>
       <div class="grade-badge big" id="modal-grade"></div>
       <h3 id="modal-name"></h3>
       <p class="modal-msg" id="modal-msg"></p>
@@ -390,6 +393,7 @@
       <button data-dev="specialOff">✨ 특별 뽑기 끝</button>
       <button data-dev="dailyReroll">🏆 TOP3 다시 뽑기</button>
       <button data-dev="freeReset">🎁 무료 코인 다시</button>
+      <button data-dev="fxDemo">🎉 당첨 연출 보기</button>
       <button data-dev="resetSave" class="danger">🗑 저장 초기화</button>
     </div>
   </aside>
@@ -405,6 +409,7 @@
   <script src="js/scissors.js"></script>
   <script src="js/stacker.js"></script>
   <script src="js/pusher.js"></script>
+  <script src="js/celebrate.js"></script>
   <script src="js/app.js"></script>
   <script src="js/fx.js"></script>
 </body>

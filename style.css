@@ -892,3 +892,85 @@ button:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, va
 .dev-grid button { padding: 8px; border-radius: var(--r-sm); background: var(--surface-2); border: 1.5px solid rgba(255,255,255,.2); font-weight: 700; transition: transform .2s var(--spring), background .2s; }
 .dev-grid button:hover { background: rgba(94,230,255,.2); transform: translateY(-2px); }
 .dev-grid button.danger { grid-column: span 2; color: #ffb3b3; border-color: #ff7b7b88; }
+
+/* =====================================================================
+   당첨 연출 (등급이 높을수록 화려하게)
+   ===================================================================== */
+.fx-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 31; pointer-events: none; }
+.fx-flash { position: fixed; inset: 0; z-index: 30; pointer-events: none; animation: fxFlash .8s ease-out forwards; }
+@keyframes fxFlash { 0% { opacity: var(--o, .8); } 100% { opacity: 0; } }
+.fx-shake-3 { animation: shake3 .5s !important; }
+.fx-shake-4 { animation: shake4 .7s !important; }
+@keyframes shake3 { 10%,50%,90% { transform: translate(-5px, 2px) rotate(-1deg); } 30%,70% { transform: translate(5px, -2px) rotate(1deg); } }
+@keyframes shake4 { 10%,50%,90% { transform: translate(-10px, 4px) rotate(-2deg) scale(1.03); } 30%,70% { transform: translate(10px, -4px) rotate(2deg) scale(1.03); } }
+
+.modal-card { position: relative; overflow: visible; }
+.modal-stage { position: relative; width: 170px; height: 170px; margin: 0 auto; }
+.modal-stage .modal-doll { position: relative; z-index: 1; }
+.modal-rays {
+  position: absolute; inset: -70px; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--g, #fff) 75%, transparent) 0 8deg, transparent 8deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%);
+  animation: spin 9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.fx-C .modal-rays { opacity: .25; }
+.fx-B .modal-rays { opacity: .45; }
+.fx-A .modal-rays { opacity: .7; animation-duration: 6s; }
+.fx-S .modal-rays { opacity: 1; animation-duration: 4s; inset: -110px; }
+.fx-S .modal-stage::before {
+  content: ""; position: absolute; inset: -90px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 10deg, #ff6fae55 0 6deg, transparent 6deg 30deg, #5ee6ff55 30deg 36deg, transparent 36deg 60deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 65%); mask: radial-gradient(circle, #000 15%, transparent 65%);
+  animation: spin 7s linear infinite reverse;
+}
+
+/* A·S 공개 직전: 검은 실루엣이 떨리며 빛을 모음 */
+.modal-card.charging .modal-doll { filter: brightness(0) drop-shadow(0 0 14px var(--g)) drop-shadow(0 0 30px var(--g)) !important; animation: tremble .12s infinite; }
+.modal-card.charging .modal-rays { opacity: .35; animation-duration: 1.5s; }
+.modal-card.charging #modal-name { animation: blink .5s infinite; }
+@keyframes tremble { 25% { transform: translate(-2px, 1px) rotate(-2deg); } 75% { transform: translate(2px, -1px) rotate(2deg); } }
+
+/* 공개 순간 */
+.modal-card.revealed .modal-doll { animation: revealPop .7s var(--spring), bounce 1.1s .7s infinite; }
+@keyframes revealPop { 0% { transform: scale(.2) rotate(-25deg); } 60% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1); } }
+.modal-card.revealed #modal-grade { animation: badgePop .6s var(--spring); }
+@keyframes badgePop { 0% { transform: scale(0); } 70% { transform: scale(1.3); } }
+.fx-A.revealed #modal-grade, .fx-S.revealed #modal-grade { animation: badgePop .6s var(--spring), glowPulse 1.2s .6s ease-in-out infinite; }
+@keyframes glowPulse { 50% { box-shadow: 0 0 26px var(--g), 0 0 50px var(--g); } }
+
+.modal-hype {
+  position: absolute; left: 50%; top: -26px; transform: translateX(-50%); z-index: 2; white-space: nowrap;
+  font-size: 30px; font-weight: 900; letter-spacing: 2px; color: #fff; pointer-events: none;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--g) 70%, #000);
+  text-shadow: 0 3px 0 color-mix(in srgb, var(--g) 60%, #000), 0 0 18px var(--g);
+}
+.modal-hype:empty { display: none; }
+.revealed .modal-hype { animation: hypeIn .6s var(--spring); }
+.fx-S .modal-hype { font-size: 38px; background: linear-gradient(90deg, #fff3a8, #ffd23f, #ff9f1c, #fff3a8); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 1.5px #7a4a00;
+  text-shadow: none; filter: drop-shadow(0 0 12px #ffd23f); }
+.fx-S.revealed .modal-hype { animation: hypeIn .7s var(--spring), aurora 1.5s linear infinite; }
+@keyframes hypeIn { 0% { transform: translateX(-50%) scale(2.6); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+.modal-new {
+  position: absolute; top: 14px; right: 14px; z-index: 2; padding: 4px 12px; border-radius: 10px;
+  background: var(--pink); color: #fff; font-weight: 900; font-size: 15px; transform: rotate(12deg);
+  box-shadow: 0 0 0 2px #fff, 0 6px 16px rgba(255,79,151,.5); animation: stamp .5s .25s var(--spring) backwards;
+}
+@keyframes stamp { 0% { transform: rotate(12deg) scale(3); opacity: 0; } 100% { transform: rotate(12deg) scale(1); opacity: 1; } }
+
+.modal-card.fx-A { box-shadow: 0 0 0 3px #ff8c42, 0 24px 60px rgba(0,0,0,.55), 0 0 90px #ff8c42aa; }
+.modal-card.fx-S {
+  background: radial-gradient(circle at 50% 30%, #5a3d12, #2a1840 70%);
+  box-shadow: 0 0 0 3px #ffd23f, 0 0 0 7px #ffd23f44, 0 0 120px #ffd23f, 0 0 220px #ff9f1c88;
+}
+.modal-card.fx-S.revealed { animation: zoom .5s var(--spring), sGlow 1.6s .5s ease-in-out infinite; }
+@keyframes sGlow { 50% { box-shadow: 0 0 0 3px #fff3a8, 0 0 0 10px #ffd23f66, 0 0 160px #ffd23f, 0 0 280px #ff9f1caa; } }
+
+.sound-btn {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2); font-size: 17px;
+  border: 1.5px solid rgba(255,255,255,.25); transition: transform .3s var(--spring);
+}
+.sound-btn:hover { transform: scale(1.1) rotate(-8deg); }
+@media (max-width: 620px) { .wallet { margin-left: 0; } .sound-btn { margin-left: auto; width: 34px; height: 34px; } .modal-hype { font-size: 24px; } .fx-S .modal-hype { font-size: 30px; } }

@@ -11,7 +11,7 @@ const deepFreeze = o => {
   return o;
 };
 [GRADES, GRADE_ORDER, MACHINES, BASE_DOLLS, DOLLS, PALETTES, OUTFITS, DOLL_BY_ID, MACHINE_BY_ID, REGULAR_POOL, SPECIAL_POOL].forEach(deepFreeze);
-[ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, Kit, DollArt, SpecialState]
+[ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, Kit, DollArt, SpecialState, Celebrate]
   .forEach(o => Object.freeze(o));
 Object.freeze(Math);
 try {
@@ -539,7 +539,7 @@ function giveDoll(doll, note) {
   renderNavCount();
   if (currentView === 'store') renderStore();
   const head = first ? '🎉 새로운 인형 획득! 진열장에 전시됐어요' : `🎉 인형 획득! (보유 ${rec.count}개)`;
-  queueModal(dollModal(doll, note ? `${note} · ${head}` : head));
+  queueModal({ ...dollModal(doll, note ? `${note} · ${head}` : head), fx: { grade: doll.grade, isNew: first } });
 }
 // 기계에서 당첨: 방금 열었던 기계의 인형만 인정
 function award(doll, note) {
@@ -779,7 +779,51 @@ function nextModal() { const m = modalQueue.shift(); if (m) showModal(m); }
 function dollModal(d, msg) {
   return { img: DollArt.url(d), color: GRADES[d.grade].color, badge: `${d.grade} · ${GRADES[d.grade].name}${d.special ? ' · ✨특별' : ''}`, name: d.name, msg, desc: d.desc };
 }
+// 등급별 당첨 연출: D~B는 바로 터지고, A·S는 실루엣으로 두근두근 모였다가 공개
+const HYPE = { S: '★ LEGEND ★', A: 'AMAZING!!', B: 'GREAT!', C: 'NICE!', D: 'GET!' };
 function showModal(spec) {
+  const card = document.querySelector('.modal-card');
+  clearTimeout(showModal.timer);
+  card.classList.remove('fx', 'fx-D', 'fx-C', 'fx-B', 'fx-A', 'fx-S', 'charging', 'revealed');
+  $('modal-new').hidden = true;
+  $('modal-hype').textContent = '';
+  const fx = spec.fx;
+  if (!fx) { fillModal(spec); $('modal').hidden = false; return; }
+  const lv = Celebrate.LV[fx.grade];
+  card.classList.add('fx', `fx-${fx.grade}`);
+  const reveal = () => {
+    if (!card.classList.contains('fx')) return;
+    card.classList.remove('charging');
+    void card.offsetWidth;
+    card.classList.add('revealed');
+    fillModal(spec);
+    $('modal-hype').textContent = HYPE[fx.grade];
+    $('modal-new').hidden = !fx.isNew;
+    const r = $('modal-img').getBoundingClientRect();
+    Celebrate.burst(fx.grade, r.left + r.width / 2, r.top + r.height / 2, { isNew: fx.isNew, shakeEl: card });
+  };
+  $('modal').style.setProperty('--g', spec.color);
+  if (lv >= 3) {
+    card.classList.add('charging');
+    $('modal-img').src = spec.img; $('modal-img').style.filter = '';
+    $('modal-grade').textContent = '? ? ?';
+    $('modal-grade').setAttribute('style', `--g:${spec.color}`);
+    $('modal-name').textContent = lv === 4 ? '……!!' : '……!';
+    $('modal-msg').textContent = lv === 4 ? '엄청난 기운이 느껴진다…' : '뭔가 반짝인다…';
+    $('modal-desc').textContent = '';
+    $('modal-actions').innerHTML = '';
+    $('modal').hidden = false;
+    const r = $('modal-img').getBoundingClientRect();
+    Celebrate.charge(fx.grade, r.left + r.width / 2, r.top + r.height / 2);
+    showModal.timer = setTimeout(reveal, lv === 4 ? 1400 : 800);
+    // 기다리기 싫으면 눌러서 바로 공개
+    card.onclick = () => { if (card.classList.contains('charging')) { clearTimeout(showModal.timer); reveal(); } };
+  } else {
+    $('modal').hidden = false;
+    reveal();
+  }
+}
+function fillModal(spec) {
   $('modal').style.setProperty('--g', spec.color);
   $('modal-img').src = spec.img;
   $('modal-img').style.filter = spec.locked ? 'brightness(0) opacity(.45)' : '';
@@ -798,13 +842,13 @@ function showModal(spec) {
     el.onclick = () => { $('modal').hidden = true; if (b.fn) b.fn(); if ($('modal').hidden) nextModal(); };
     box.appendChild(el);
   }
-  $('modal').hidden = false;
 }
 
 // ================= 개발자 모드 =================
 // 로고 5번 연속 클릭 또는 Ctrl+Shift+D → 암호 입력. 암호는 코드에 해시로만 들어 있음
 const DEV_SALT = 'mongle-dev-salt::';
 const DEV_HASH = '2225da8df95df42bb591839aacf9ffce145f28d32c159c83805ec10f90467d1b';
+let fxDemoStep = 0;
 let dev = false, devFails = 0, devLockUntil = 0, logoClicks = [];
 
 async function sha256(text) {
@@ -824,6 +868,9 @@ document.querySelector('.logo').addEventListener('click', () => {
   logoClicks.push(now);
   if (logoClicks.length >= 5) { logoClicks = []; openDevLogin(); }
 });
+const renderSoundBtn = () => { $('sound-btn').textContent = Celebrate.sound.on ? '🔊' : '🔇'; };
+$('sound-btn').onclick = () => { Celebrate.sound.toggle(); renderSoundBtn(); toast(Celebrate.sound.on ? '🔊 효과음을 켰어요' : '🔇 효과음을 껐어요'); };
+renderSoundBtn();
 $('dev-cancel').onclick = () => { $('dev-login').hidden = true; };
 $('dev-form').addEventListener('submit', async e => {
   e.preventDefault();
@@ -881,6 +928,12 @@ const DEV_ACTIONS = {
     const now = Date.now();
     for (const d of DOLLS) { const r = save.owned[d.id] || { count: 0, first: now, last: now }; r.count = Math.max(1, r.count); save.owned[d.id] = r; }
     persist(); renderNavCount(); refreshAll();
+  },
+  // 당첨 연출 미리보기 (인형은 주지 않음): 누를 때마다 D → C → B → A → S
+  fxDemo: () => {
+    const g = GRADE_ORDER[4 - (fxDemoStep++ % 5)];
+    const d = BASE_DOLLS.find(x => x.grade === g);
+    showModal({ ...dollModal(d, '개발자 모드 연출 미리보기 (인형은 지급되지 않아요)'), fx: { grade: g, isNew: true } });
   },
   resetSave: () => showModal({
     img: DollArt.url(DOLLS[0]), color: '#ff5c74', badge: '🛠 개발자 모드', name: '저장 데이터 초기화',
