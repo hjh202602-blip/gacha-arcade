@@ -142,6 +142,7 @@ const Celebrate = (() => {
       get on() { return on(); },
       toggle() { try { localStorage.setItem(SOUND_KEY, on() ? 'off' : 'on'); } catch (e) {} return on(); },
       pop() { tone(R(500, 900), 0, 0.25, 'sine', 0.06, 120); },
+      note(i) { tone([392, 523.25, 659.25, 783.99][i % 4], 0, 0.32, 'triangle', 0.12); },   // 멜로디 기계 버튼
       charge(lv) {   // 두근두근 올라가는 소리
         const d = lv === 4 ? 1.3 : 0.75;
         tone(180, 0, d, 'sawtooth', 0.05, lv === 4 ? 1400 : 900);

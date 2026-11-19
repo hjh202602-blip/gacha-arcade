@@ -14,6 +14,10 @@ const PunchGame = (() => {
   let running = false, raf = 0, last = 0;
   let state = 'idle', t = 0, p = 0, v = 0, speed = 2, score = 0, shown = 0, grade = null;
   let padUp = 0, hit = 0, shake = 0;
+  // 삼연타 펀치: 세 번 치고 평균 점수로 판정. 칠 때마다 게이지가 25% 빨라짐
+  let hits = [];
+  const isCombo = () => machine && machine.gimmick === 'combo';
+  const bestKey = () => (machine ? machine.id : 'punch');
 
   const easeOut = k => 1 - (1 - k) ** 3;
 
@@ -31,15 +35,20 @@ const PunchGame = (() => {
       if (t >= 0.22) { hit = 1; shake = 1; state = 'counting'; t = 0; }
     } else if (state === 'counting') {
       shown = Math.round(score * easeOut(Math.min(1, t / 1.3)));
-      if (t >= 1.3) {
+      if (t >= 1.3 && isCombo() && hits.length < 2) {
+        hits.push(score); shown = score;
+        state = 'ready'; t = 0; speed *= 1.25; p = Math.random() * 2; v = 1 - Math.abs(p - 1);
+        setUI();
+      } else if (t >= 1.3) {
+        if (isCombo()) { hits.push(score); score = Math.round(hits.reduce((a, b) => a + b, 0) / hits.length); }
         shown = score; state = 'result'; t = 0;
         const g = THRESH.find(([, s]) => score >= s);
         grade = g ? g[0] : null;
-        const best = hooks.best('punch', score);
+        const best = hooks.best(bestKey(), score);
         els.extra.textContent = `최고 ${best}점`;
         if (grade) {
           const doll = pickOfGrade(machine.id, grade);
-          hooks.award(doll, `${score}점! ${grade}등급 달성`);
+          hooks.award(doll, isCombo() ? `${hits.join(' + ')} → 평균 ${score}점! ${grade}등급` : `${score}점! ${grade}등급 달성`);
         }
         setUI();
       }
@@ -69,7 +78,7 @@ const PunchGame = (() => {
 
     // 점수판
     c.fillStyle = '#ffe066'; c.font = '900 22px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('★ PUNCH ★', 190, 58);
+    c.fillText(m.gimmick === 'combo' ? '★ 3 COMBO ★' : '★ PUNCH ★', 190, 58);
     c.fillStyle = '#0d0608'; rr(c, 72, 76, 236, 112, 14); c.fill();
     c.font = 'bold 92px Consolas, "Courier New", monospace';
     c.fillStyle = 'rgba(255,59,48,.12)'; c.fillText('888', 190, 136);
@@ -122,7 +131,17 @@ const PunchGame = (() => {
 
     // 하단 코인 투입구
     c.fillStyle = 'rgba(0,0,0,.35)'; rr(c, 130, 500, 120, 44, 10); c.fill();
-    c.fillStyle = '#ffe066'; c.font = 'bold 16px sans-serif'; c.fillText('1 COIN', 190, 522);
+    c.fillStyle = '#ffe066'; c.font = 'bold 16px sans-serif'; c.fillText(`${m.price || 1} COIN`, 190, 522);
+    // 삼연타: 친 점수 표시
+    if (m.gimmick === 'combo') {
+      for (let i = 0; i < 3; i++) {
+        const done = live && i < hits.length, cur = live && i === hits.length && state !== 'idle' && state !== 'result';
+        c.fillStyle = done ? '#ffe066' : cur ? 'rgba(255,224,102,.35)' : 'rgba(0,0,0,.35)';
+        rr(c, 86 + i * 72, 563, 64, 30, 10); c.fill();
+        c.fillStyle = done ? '#3b2300' : '#fff'; c.font = '900 15px sans-serif';
+        c.fillText(done ? String(hits[i]) : `${i + 1}타`, 118 + i * 72, 578);
+      }
+    }
     c.restore();
 
     // 힘 게이지
@@ -160,10 +179,10 @@ const PunchGame = (() => {
   function setUI() {
     const map = {
       idle: ['🪙 코인 넣기', hooks.coins() > 0 ? '코인을 넣어주세요' : '코인이 부족해요! 인형을 팔거나 교환기로'],
-      ready: ['펀치!', '게이지 꼭대기에서 펀치!'],
+      ready: [isCombo() ? `펀치! (${hits.length + 1}/3)` : '펀치!', isCombo() ? `${hits.length + 1}번째 펀치! 게이지가 점점 빨라져요` : '게이지 꼭대기에서 펀치!'],
       punch: ['...', '으랏차!'],
       counting: ['...', '점수 측정 중...'],
-      result: ['...', grade ? `${score}점! ${grade}등급 인형 획득` : `${score}점… 300점 이상이면 인형을 받아요`],
+      result: ['...', (isCombo() ? '평균 ' : '') + (grade ? `${score}점! ${grade}등급 인형 획득` : `${score}점… 300점 이상이면 인형을 받아요`)],
     };
     const [label, msg] = map[state];
     els.btn.textContent = label;
@@ -174,7 +193,7 @@ const PunchGame = (() => {
   function action() {
     if (state === 'idle') {
       if (hooks.spendCoin()) {
-        state = 'ready'; t = 0; shown = 0; grade = null;
+        state = 'ready'; t = 0; shown = 0; grade = null; hits = [];
         p = Math.random() * 2; v = 1 - Math.abs(p - 1); speed = newSpeed();
         setUI();
       }
@@ -199,8 +218,13 @@ const PunchGame = (() => {
       machine = MACHINES.find(m => m.type === 'punch');
     },
     open(m) {
+      if (machine !== m) {
+        if (state === 'ready') hooks.refund(machine.price || 1, '다른 기계로 옮겨서 넣어둔 코인을 돌려받았어요');
+        if (state === 'ready') state = 'idle';
+        hits = [];
+      }
       machine = m;
-      const b = hooks.best('punch');
+      const b = hooks.best(bestKey());
       els.extra.textContent = b ? `최고 ${b}점` : '';
       setUI(); draw();
     },

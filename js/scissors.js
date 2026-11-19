@@ -7,6 +7,9 @@ const ScissorsGame = (() => {
 
   let canvas, ctx, els, hooks, machine, loop;
   let strings = [], state = 'idle', t = 0, time = 0, sx = START_X, cut = null, snip = 0;
+  // 왕복 가위: 가위가 혼자 왔다 갔다 하고, 끝에 닿을 때마다 빨라짐. 탭 한 번으로 자름
+  let dir = 1, speedMul = 1, bounces = 0;
+  const isPing = () => machine && machine.gimmick === 'pingpong';
 
   function build() {
     const pool = dollsOf(machine.id).slice().sort(() => Math.random() - 0.5);
@@ -24,7 +27,13 @@ const ScissorsGame = (() => {
   function update(dt) {
     time += dt; t += dt;
     snip = Math.max(0, snip - dt * 3);
-    if (state === 'move') {
+    if (state === 'move' && isPing()) {
+      sx += SPEED * 1.25 * speedMul * dir * dt;
+      if (sx >= END_X || sx <= START_X) {
+        sx = Math.max(START_X, Math.min(END_X, sx)); dir = -dir; bounces++; speedMul *= 1.18;
+        if (bounces >= 6) doCut();   // 너무 오래 끌면 자동으로 싹둑
+      }
+    } else if (state === 'move') {
       sx += SPEED * dt;
       if (sx >= END_X) { sx = END_X; doCut(); }
     } else if (state === 'falling') {
@@ -123,6 +132,10 @@ const ScissorsGame = (() => {
       miss: ['...', '실을 못 잘랐어요'],
       done: ['...', '획득!'],
     };
+    if (isPing()) {
+      map.ready = ['▶ 탭해서 출발', '탭하면 가위가 왔다 갔다 해요'];
+      map.move = ['✂ 탭해서 싹둑!', '실 위에 왔을 때 탭! 끝에 닿을 때마다 빨라져요'];
+    }
     const [label, msg] = map[state];
     els.btn.textContent = label;
     els.btn.disabled = !(state === 'ready' || state === 'move' || (state === 'idle' && hooks.coins() > 0));
@@ -132,9 +145,10 @@ const ScissorsGame = (() => {
   // 누르기 / 떼기
   function press() {
     if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; sx = START_X; setUI(); } }
-    else if (state === 'ready') { state = 'move'; setUI(); }
+    else if (state === 'ready') { state = 'move'; dir = 1; speedMul = 1; bounces = 0; setUI(); }
+    else if (state === 'move' && isPing()) doCut();
   }
-  function release() { if (state === 'move') doCut(); }
+  function release() { if (state === 'move' && !isPing()) doCut(); }
 
   return {
     init(e, h) {
@@ -145,9 +159,15 @@ const ScissorsGame = (() => {
     },
     // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
     restock() { if (state !== 'idle') return false; build(); draw(); return true; },
-    open(m) { machine = m; setUI(); draw(); },
+    open(m) {
+      if (machine !== m) {
+        if (state === 'ready' || state === 'move') hooks.refund(machine.price || 1, '다른 기계로 옮겨서 넣어둔 코인을 돌려받았어요');
+        machine = m; state = 'idle'; cut = null; sx = START_X; build();
+      }
+      setUI(); draw();
+    },
     start() { loop.start(); },
-    stop() { loop.stop(); if (state === 'move') doCut(); },
+    stop() { loop.stop(); if (state === 'move' && !isPing()) doCut(); },
     press, release,
     action: press,
     get state() { return state; },

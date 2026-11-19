@@ -9,6 +9,12 @@ const KeymasterGame = (() => {
 
   let canvas, ctx, els, hooks, machine, loop;
   let lockers = [], state = 'idle', t = 0, kx = X_MIN, ky = Y_MIN, dx = 1, dy = 1, won = null, open = 0;
+  // 미끄럼 키 마스터: 열쇠구멍이 사물함 안에서 좌우로 움직임 (열쇠를 꽂는 순간 멈춤)
+  let time = 0;
+  const isSlide = () => machine && machine.gimmick === 'slide';
+  function slideHoles() {
+    lockers.forEach((l, i) => { l.hx = l.cx + (isSlide() ? Math.sin(time * (1.1 + i * 0.13) + i * 1.7) * 18 : 0); });
+  }
 
   function build() {
     const used = new Set();
@@ -28,6 +34,7 @@ const KeymasterGame = (() => {
 
   function update(dt) {
     t += dt;
+    if (state === 'idle' || state === 'moveX' || state === 'moveY') { time += dt; slideHoles(); }
     if (state === 'moveX') [kx, dx] = sweep(kx, dx, X_MIN, X_MAX, SPEED_X, dt);
     else if (state === 'moveY') [ky, dy] = sweep(ky, dy, Y_MIN, Y_MAX, SPEED_Y, dt);
     else if (state === 'insert') {
@@ -141,7 +148,13 @@ const KeymasterGame = (() => {
     },
     // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
     restock() { if (state !== 'idle') return false; build(); draw(); return true; },
-    open(m) { machine = m; setUI(); draw(); },
+    open(m) {
+      if (machine !== m) {
+        if (state === 'moveX' || state === 'moveY') hooks.refund(machine.price || 1, '다른 기계로 옮겨서 넣어둔 코인을 돌려받았어요');
+        machine = m; state = 'idle'; won = null; open = 0; build(); slideHoles();
+      }
+      setUI(); draw();
+    },
     start() { loop.start(); },
     stop() { loop.stop(); },
     action,

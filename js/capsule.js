@@ -10,6 +10,19 @@ const CapsuleGame = (() => {
   let canvas, ctx, els, hooks, machine;
   let running = false, raf = 0, last = 0;
   let caps = [], state = 'idle', t = 0, handleA = 0, out = null;
+  // 골든 레버: 레버가 빙글빙글 돌고, 손잡이 끝이 위쪽 금색 칸에 있을 때 멈추면 높은 등급 확률이 크게 오름
+  const isLucky = () => machine && machine.gimmick === 'lucky';
+  const LUCKY_A = -Math.PI / 2, LUCKY_W = 0.3, SPIN = 7.2;
+  const BOOST = { S: 5, A: 3, B: 1.5, C: 1, D: 0.6 };
+  let lucky = false, a0 = 0;
+  const angDiff = (a, b) => Math.abs(((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+  function pickBoosted() {
+    const pool = dollsOf(machine.id);
+    const w = d => gradeWeight(machine.id, d.grade) * BOOST[d.grade];
+    let roll = Math.random() * pool.reduce((s, d) => s + w(d), 0);
+    for (const d of pool) if ((roll -= w(d)) < 0) return d;
+    return pool[pool.length - 1];
+  }
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const ease = k => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
@@ -63,16 +76,24 @@ const CapsuleGame = (() => {
     caps.forEach((c, i) => { if (c.y > caps[low].y) low = i; });
     const picked = caps.splice(low, 1)[0];
     caps.push(newCap(GX + rand(-40, 40), GY - GR + 50));
-    const doll = pickDoll(machine.id);
+    const doll = lucky ? pickBoosted() : pickDoll(machine.id);
     const col = doll.grade === 'S' ? 'gold' : doll.grade === 'A' ? 'silver' : picked.col;
     out = { x: EXIT.x - 30, y: 505, vx: 60, vy: 0, a: 0, col, doll, open: 0, rest: 0 };
     state = 'dropping'; t = 0;
     setUI();
   }
 
+  const isLuckyM = m => m && m.gimmick === 'lucky';
   function update(dt) {
     t += dt;
-    if (state === 'turning') {
+    if (state === 'spin') {
+      handleA = (handleA + SPIN * dt) % (Math.PI * 2);
+      for (const c of caps) if (Math.random() < 0.04) { c.vx += rand(-120, 120); c.vy -= rand(50, 200); }
+    } else if (state === 'turning' && isLucky()) {
+      handleA = a0 + ease(Math.min(1, t / 0.7)) * Math.PI * 2;
+      for (const c of caps) if (Math.random() < 0.12) { c.vx += rand(-260, 260); c.vy -= rand(100, 480); }
+      if (t >= 0.7) dropCapsule();
+    } else if (state === 'turning') {
       handleA = ease(Math.min(1, t / TURN_TIME)) * Math.PI * 2;
       for (const c of caps) if (Math.random() < 0.12) { c.vx += rand(-260, 260); c.vy -= rand(100, 480); }
       if (t >= TURN_TIME) dropCapsule();
@@ -164,8 +185,20 @@ const CapsuleGame = (() => {
     // 가격판
     c.fillStyle = '#fff8e8'; roundRect(c, 236, 400, 108, 40, 10); c.fill();
     c.fillStyle = th.cab2; c.font = 'bold 18px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('1 COIN', 290, 421);
+    c.fillText(`${m.price || 1} COIN`, 290, 421);
 
+    // 골든 레버: 금색 칸
+    if (isLuckyM(m)) {
+      c.save(); c.translate(HANDLE.x, HANDLE.y);
+      c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.arc(0, 0, HANDLE.r + 16, 0, 6.28); c.fill();
+      c.fillStyle = '#ffd23f'; c.shadowColor = '#ffd23f'; c.shadowBlur = live && state === 'spin' ? 16 : 6;
+      c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, HANDLE.r + 16, LUCKY_A - LUCKY_W, LUCKY_A + LUCKY_W); c.closePath(); c.fill();
+      c.restore();
+      if (live && (state === 'turning' || state === 'dropping' || state === 'tray') && lucky) {
+        c.save(); c.fillStyle = '#ffd23f'; c.font = '900 26px sans-serif'; c.textAlign = 'center';
+        c.shadowColor = '#ff9f1c'; c.shadowBlur = 14; c.fillText('★ LUCKY! ★', HANDLE.x, HANDLE.y - HANDLE.r - 30); c.restore();
+      }
+    }
     // 레버
     c.save(); c.translate(HANDLE.x, HANDLE.y);
     const hg = c.createRadialGradient(-12, -14, 6, 0, 0, HANDLE.r);
@@ -175,6 +208,7 @@ const CapsuleGame = (() => {
     c.rotate(handleA);
     c.fillStyle = th.cab2; roundRect(c, -38, -11, 76, 22, 11); c.fill();
     c.fillStyle = '#fff'; c.beginPath(); c.arc(0, 0, 9, 0, 6.28); c.fill();
+    if (isLuckyM(m)) { c.fillStyle = '#ff3d6e'; c.beginPath(); c.arc(32, 0, 7, 0, 6.28); c.fill(); }   // 손잡이 끝 표시
     c.restore();
     if (live && state === 'ready' && Math.floor(performance.now() / 400) % 2) {
       c.fillStyle = '#fff'; c.font = 'bold 15px sans-serif';
@@ -217,8 +251,9 @@ const CapsuleGame = (() => {
   // ---------- 입력 / UI ----------
   const UI = {
     idle: ['🪙 코인 넣기', () => (hooks.coins() > 0 ? '코인을 넣어주세요' : '코인이 부족해요! 인형을 팔거나 교환기로')],
-    ready: ['레버 돌리기', () => '레버를 돌려주세요!'],
-    turning: ['데구루루...', () => '드르륵 드르륵...'],
+    ready: ['레버 돌리기', () => (isLucky() ? '레버를 돌리고, 빨간 끝이 금색 칸에 올 때 멈춰요!' : '레버를 돌려주세요!')],
+    spin: ['⏹ 멈추기!', () => '빨간 끝이 위쪽 금색 칸에 왔을 때 멈춰요!'],
+    turning: ['데구루루...', () => (isLucky() ? (lucky ? '★ LUCKY! 황금 캡슐 확률 UP!' : '아쉽게 금색 칸을 지나쳤어요') : '드르륵 드르륵...')],
     dropping: ['데구루루...', () => '캡슐이 나온다!'],
     tray: ['캡슐 열기', () => (out.col === 'gold' ? '✨ 황금 캡슐이다!! 눌러서 열기' : out.col === 'silver' ? '은빛 캡슐! 눌러서 열기' : '캡슐을 눌러서 열어보세요')],
     opening: ['두근두근...', () => '두근두근...'],
@@ -227,20 +262,26 @@ const CapsuleGame = (() => {
   function setUI() {
     const [label, msg] = UI[state];
     els.btn.textContent = label;
-    els.btn.disabled = !(state === 'ready' || state === 'tray' || (state === 'idle' && hooks.coins() > 0));
+    els.btn.disabled = !(state === 'ready' || state === 'spin' || state === 'tray' || (state === 'idle' && hooks.coins() > 0));
+    els.btn.classList.toggle('stop', state === 'spin');
     els.status.textContent = msg();
   }
 
   function action() {
     if (state === 'idle') { if (hooks.spendCoin()) { state = 'ready'; t = 0; setUI(); } }
-    else if (state === 'ready') { state = 'turning'; t = 0; setUI(); }
+    else if (state === 'ready' && isLucky()) { state = 'spin'; t = 0; lucky = false; setUI(); }
+    else if (state === 'spin') {
+      lucky = angDiff(handleA, LUCKY_A) <= LUCKY_W;
+      a0 = handleA; state = 'turning'; t = 0; setUI();
+    }
+    else if (state === 'ready') { lucky = false; state = 'turning'; t = 0; setUI(); }
     else if (state === 'tray') { state = 'opening'; t = 0; setUI(); }
   }
 
   function onPointer(e) {
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * W, y = ((e.clientY - rect.top) / rect.height) * H;
-    if (state === 'ready' && Math.hypot(x - HANDLE.x, y - HANDLE.y) < HANDLE.r + 16) action();
+    if ((state === 'ready' || state === 'spin') && Math.hypot(x - HANDLE.x, y - HANDLE.y) < HANDLE.r + 16) action();
     else if (state === 'tray' && Math.hypot(x - out.x, y - out.y) < CR + 26) action();
   }
 
@@ -261,7 +302,14 @@ const CapsuleGame = (() => {
       machine = MACHINES.find(m => m.type === 'capsule');
       fill();
     },
-    open(m) { machine = m; setUI(); draw(); },
+    open(m) {
+      if (machine !== m) {
+        if (state === 'ready' || state === 'spin') hooks.refund(machine.price || 1, '다른 기계로 옮겨서 넣어둔 코인을 돌려받았어요');
+        if (state === 'ready' || state === 'spin') state = 'idle';
+        machine = m;
+      }
+      setUI(); draw();
+    },
     start() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
     stop() { running = false; cancelAnimationFrame(raf); },
     action,

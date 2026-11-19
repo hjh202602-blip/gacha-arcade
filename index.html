@@ -219,6 +219,93 @@
     </div>
   </section>
 
+  <section class="view play" data-view="play-reaction" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="reaction-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="reaction-status"></span>
+              <span id="reaction-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="reaction-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 돼요 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">초록불이 켜진 순간에만 누르세요. 노란 번쩍임은 가짜예요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-mole" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="mole-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="mole-status"></span>
+              <span id="mole-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="mole-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">인형을 직접 터치 · 키보드 1~9</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">인형이 나오자마자 터치! 뒤로 갈수록 빨리 들어가요. 💣는 -2, 빈 구멍을 누르면 -1이에요.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-memory" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="memory-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="memory-status"></span>
+              <span id="memory-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="memory-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">버튼을 직접 터치 · 키보드 1~4</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">소리와 색을 같이 기억하면 쉬워요. 단계가 올라갈수록 빨라져요.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
   <section class="view play" data-view="play-keymaster" hidden>
     <div class="play-wrap">
       <a href="#/" class="back">← 매장으로 돌아가기</a>
@@ -427,6 +514,9 @@
   <script src="js/scissors.js"></script>
   <script src="js/stacker.js"></script>
   <script src="js/pusher.js"></script>
+  <script src="js/reaction.js"></script>
+  <script src="js/mole.js"></script>
+  <script src="js/memory.js"></script>
   <script src="js/celebrate.js"></script>
   <script src="js/app.js"></script>
   <script src="js/fx.js"></script>

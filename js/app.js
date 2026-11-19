@@ -11,7 +11,7 @@ const deepFreeze = o => {
   return o;
 };
 [GRADES, GRADE_ORDER, MACHINES, BASE_DOLLS, DOLLS, PALETTES, OUTFITS, DOLL_BY_ID, MACHINE_BY_ID, REGULAR_POOL, SPECIAL_POOL].forEach(deepFreeze);
-[ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, Kit, DollArt, SpecialState, Celebrate]
+[ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, ReactionGame, MoleGame, MemoryGame, Kit, DollArt, SpecialState, Celebrate]
   .forEach(o => Object.freeze(o));
 Object.freeze(Math);
 try {
@@ -456,6 +456,15 @@ function setMarquee(m) {
     : `${m.name}<small>${stars(m.level)} ${m.levelText} · 1회 ${priceOf(m)}코인</small>${sp}`;
 }
 
+// 기믹이 다른 기계의 도움말
+const TIPS = {
+  randtimer: '목표 시간이 매번 달라요. 1.5초 만에 숫자가 사라지니 처음 1.5초의 속도를 잘 느껴 두세요.',
+  zigzag: '벨트가 빨라졌다 느려졌다, 거꾸로도 가요. 속도가 느려질 때가 기회예요!',
+  pingpong: '한 번 탭하면 출발, 다시 탭하면 싹둑! 끝에 닿을 때마다 빨라지니 초반에 노리세요.',
+  slidekey: '열쇠구멍이 좌우로 움직여요. 세로를 멈추는 순간 구멍 위치로 판정해요.',
+  luckycap: '레버의 빨간 끝이 위쪽 금색 칸에 있을 때 멈추면 S·A 확률이 크게 올라요.',
+  combopunch: '세 번 쳐서 평균으로 판정해요. 칠 때마다 게이지가 25%씩 빨라져요.',
+};
 function openMachine(m) {
   currentMachine = m;
   if (recentMachines[0] !== m.id) { recentMachines.unshift(m.id); recentMachines.length = Math.min(2, recentMachines.length); }
@@ -463,6 +472,8 @@ function openMachine(m) {
   sec.style.setProperty('--cab', m.theme.cab);
   sec.style.setProperty('--cab2', m.theme.cab2);
   setMarquee(m);
+  const tip = sec.querySelector('.lineup-tip');
+  if (tip) { if (!tip.dataset.base) tip.dataset.base = tip.textContent; tip.textContent = TIPS[m.id] || tip.dataset.base; }
   if (m.type === 'claw') {
     const prev = clawMachine;
     clawMachine = m;
@@ -580,7 +591,7 @@ const gameHooks = Object.freeze({
   spendCoin,
   // 코인 푸셔에서 앞으로 떨어진 코인 (1개씩만)
   addCoins: () => { if (currentMachine && currentMachine.type === 'pusher') addCoins(1); },
-  refund: (n, why) => refund(Math.min(n, priceOf(currentMachine)), why),
+  refund: (n, why) => refund(Math.min(Math.max(1, n | 0), 3), why),   // 1회 가격은 최대 3코인
   award,
   // 최고 기록: 값을 주면 갱신 후 반환, 없으면 조회만 (lower=true면 낮을수록 좋음)
   best(key, val, lower) {
@@ -594,12 +605,12 @@ const gameHooks = Object.freeze({
 const GAMES = Object.freeze({
   capsule: CapsuleGame, punch: PunchGame, timer: TimerGame,
   keyring: KeyringGame, keymaster: KeymasterGame, scissors: ScissorsGame, stacker: StackerGame,
-  pusher: PusherGame,
+  pusher: PusherGame, reaction: ReactionGame, mole: MoleGame, memory: MemoryGame,
 });
 CapsuleGame.init({ canvas: $('capsule-canvas'), btn: $('capsule-btn'), status: $('capsule-status'), extra: $('capsule-extra') }, gameHooks);
 PunchGame.init({ canvas: $('punch-canvas'), btn: $('punch-btn'), status: $('punch-status'), extra: $('punch-extra') }, gameHooks);
 TimerGame.init({ screen: $('timer-screen'), digits: $('timer-digits'), sub: $('timer-sub'), btn: $('timer-btn'), status: $('timer-status'), extra: $('timer-extra') }, gameHooks);
-for (const type of ['keyring', 'keymaster', 'scissors', 'stacker', 'pusher']) {
+for (const type of ['keyring', 'keymaster', 'scissors', 'stacker', 'pusher', 'reaction', 'mole', 'memory']) {
   GAMES[type].init({ canvas: $(`${type}-canvas`), btn: $(`${type}-btn`), status: $(`${type}-status`), extra: $(`${type}-extra`) }, gameHooks);
 }
 for (const [type, g] of Object.entries(GAMES)) {

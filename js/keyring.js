@@ -7,6 +7,12 @@ const KeyringGame = (() => {
 
   let canvas, ctx, els, hooks, machine, loop;
   let items = [], state = 'idle', t = 0, time = 0, hookY = HOOK_REST, caught = null, result = '';
+  let beltPos = 0;
+  // 지그재그 키링: 벨트 속도가 출렁이다가 거꾸로도 감
+  const beltSpeed = () => (machine && machine.gimmick === 'zigzag'
+    ? BELT_SPEED * (Math.sin(time * 0.8) * 1.7 + Math.sin(time * 2.3) * 0.5)
+    : BELT_SPEED);
+  const SPAN = SPACING * COUNT;
 
   const ringY = it => BELT_Y + 34 + Math.sin(time * 1.7 + it.ph) * 1.5;
   const ringX = it => it.x + Math.sin(time * 1.3 + it.ph) * 2.5;
@@ -22,10 +28,13 @@ const KeyringGame = (() => {
 
   function update(dt) {
     time += dt; t += dt;
+    const v = beltSpeed();
+    beltPos += v * dt;
     for (const it of items) {
       if (it === caught) continue;
-      it.x += BELT_SPEED * dt;
-      if (it.x > W + 60) { Object.assign(it, makeItem(it.x - SPACING * COUNT)); }
+      it.x += v * dt;
+      if (it.x > W + 60) Object.assign(it, makeItem(it.x - SPAN));
+      else if (it.x < W + 60 - SPAN) Object.assign(it, makeItem(it.x + SPAN));
     }
     if (state === 'shoot') {
       hookY -= SHOOT * dt;
@@ -82,7 +91,7 @@ const KeyringGame = (() => {
     // 벨트
     c.fillStyle = th.cab2; Kit.rr(c, 6, BELT_Y - 14, W - 12, 22, 11); c.fill();
     c.fillStyle = 'rgba(255,255,255,.2)';
-    const off = (time * BELT_SPEED) % 24;
+    const off = ((beltPos % 24) + 24) % 24;
     for (let x = -24 + off; x < W; x += 24) c.fillRect(x, BELT_Y - 10, 10, 4);
     for (const x of [18, W - 18]) { c.fillStyle = '#c0c6d4'; c.beginPath(); c.arc(x, BELT_Y - 3, 9, 0, 6.28); c.fill(); }
 
@@ -120,7 +129,7 @@ const KeyringGame = (() => {
 
   let demo = null;
   function demoItems(m) {
-    if (!demo) { const pool = dollsOf(m.id); demo = [40, 124, 208, 292, 376].map((x, i) => ({ x, doll: pool[i % pool.length], r: RING_R[pool[i % pool.length].grade], ph: i })); }
+    { const pool = dollsOf(m.id); demo = [40, 124, 208, 292, 376].map((x, i) => ({ x, doll: pool[i % pool.length], r: RING_R[pool[i % pool.length].grade], ph: i })); demo.m = m; }
     return demo;
   }
 
@@ -159,7 +168,13 @@ const KeyringGame = (() => {
     },
     // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
     restock() { if (state !== 'idle') return false; fill(); draw(); return true; },
-    open(m) { machine = m; setUI(); draw(); },
+    open(m) {
+      if (machine !== m) {
+        if (state === 'ready') hooks.refund(machine.price || 1, '다른 기계로 옮겨서 넣어둔 코인을 돌려받았어요');
+        machine = m; state = 'idle'; caught = null; hookY = HOOK_REST; demo = null; fill();
+      }
+      setUI(); draw();
+    },
     start() { loop.start(); },
     stop() { loop.stop(); },
     action,
