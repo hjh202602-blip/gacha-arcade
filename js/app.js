@@ -653,6 +653,7 @@ document.addEventListener('keyup', e => {
 let shelfTab = 'all';
 
 function renderShelf() {
+  renderBulk();
   const uniq = DOLLS.filter(d => found(d.id)).length;
   const total = DOLLS.reduce((s, d) => s + ownedCount(d.id), 0);
   const sCount = DOLLS.filter(d => d.grade === 'S' && found(d.id)).length;
@@ -681,7 +682,10 @@ function renderShelf() {
       <div class="plank">${row.map(d => {
         const n = ownedCount(d.id), f = found(d.id);
         const cls = !f ? 'locked' : n ? '' : 'sold';
-        return `<button class="doll-card ${cls} ${n && recent.has(d.id) ? 'new' : ''} ${d.special ? 'sp' : ''}" data-doll="${d.id}" title="${f ? d.name : '아직 못 뽑은 인형'}">
+        const q = bulk ? bulkQty(d) : 0;
+        const pick = bulk ? (q ? `pick ${bulk.sel.has(d.id) ? 'on' : ''}` : 'nopick') : '';
+        return `<button class="doll-card ${cls} ${pick} ${n && recent.has(d.id) ? 'new' : ''} ${d.special ? 'sp' : ''}" data-doll="${d.id}" title="${f ? d.name : '아직 못 뽑은 인형'}">
+          ${bulk && q ? `<span class="pick-mark">${bulk.sel.has(d.id) ? '✔' : ''}</span><span class="pick-qty">${q}개 · 🪙${q * sellPrice(d)}</span>` : ''}
           ${n > 1 ? `<span class="cnt">x${n}</span>` : ''}
           ${dailyMult(d.id) ? `<span class="boost">🔥x${dailyMult(d.id).toFixed(1)}</span>` : ''}
           <img src="${DollArt.url(d)}" alt="${f ? d.name : '미획득'}">
@@ -709,8 +713,76 @@ $('shelf-tabs').addEventListener('click', e => {
 $('shelf-body').addEventListener('click', e => {
   const b = e.target.closest('[data-doll]');
   if (!b) return;
-  openDollDetail(DOLL_BY_ID[b.dataset.doll]);
+  const d = DOLL_BY_ID[b.dataset.doll];
+  if (bulk) {   // 일괄 판매 중에는 눌러서 고르기
+    if (!bulkQty(d)) return;
+    bulk.sel.has(d.id) ? bulk.sel.delete(d.id) : bulk.sel.add(d.id);
+    renderShelf();
+    return;
+  }
+  openDollDetail(d);
 });
+
+// ================= 일괄 판매 =================
+// 진열장에서 여러 인형을 골라 한 번에 팔기. '종류마다 1개 남기기'를 끄면 마지막 1개까지 판다
+let bulk = null;   // { sel: Set<dollId>, keep: boolean }
+const bulkQty = d => Math.max(0, ownedCount(d.id) - (bulk && bulk.keep ? 1 : 0));
+const shelfList = () => DOLLS.filter(d => shelfTab === 'all' || (shelfTab === 'special' ? d.special : d.machine === shelfTab));
+function renderBulk() {
+  $('bulk-bar').hidden = !bulk;
+  $('bulk-start').hidden = !!bulk;
+  document.querySelector('.shelf-view').classList.toggle('bulk-on', !!bulk);
+  if (!bulk) return;
+  for (const id of [...bulk.sel]) if (!bulkQty(DOLL_BY_ID[id])) bulk.sel.delete(id);
+  const items = [...bulk.sel].map(id => DOLL_BY_ID[id]);
+  const n = items.reduce((s, d) => s + bulkQty(d), 0);
+  const v = items.reduce((s, d) => s + bulkQty(d) * sellPrice(d), 0);
+  $('bulk-info').innerHTML = items.length ? `<b>${items.length}종 · ${n}개</b> 선택 · 받을 코인 <b class="gold">🪙 ${v}</b>` : '팔 인형을 눌러서 골라주세요';
+  $('bulk-sell').disabled = !items.length;
+  $('bulk-sell').textContent = items.length ? `🪙 ${v}코인에 팔기` : '팔기';
+  $('bulk-keep').checked = bulk.keep;
+}
+$('bulk-start').onclick = () => { bulk = { sel: new Set(), keep: true }; renderShelf(); };
+$('bulk-cancel').onclick = () => { bulk = null; renderShelf(); };
+$('bulk-keep').onchange = e => { bulk.keep = e.target.checked; renderShelf(); };
+$('bulk-bar').addEventListener('click', e => {
+  const b = e.target.closest('[data-bulk]');
+  if (!b || !bulk) return;
+  const k = b.dataset.bulk;
+  if (k === 'none') bulk.sel.clear();
+  else shelfList().filter(d => bulkQty(d) && (k === 'all' || d.grade === k)).forEach(d => bulk.sel.add(d.id));
+  renderShelf();
+});
+$('bulk-sell').onclick = () => {
+  if (!bulk || !bulk.sel.size) return;
+  const items = [...bulk.sel].map(id => DOLL_BY_ID[id]);
+  const n = items.reduce((s, d) => s + bulkQty(d), 0);
+  const v = items.reduce((s, d) => s + bulkQty(d) * sellPrice(d), 0);
+  const lastOnes = bulk.keep ? 0 : items.filter(d => ownedCount(d.id) === bulkQty(d)).length;
+  const top = items.slice().sort(byGrade)[0];
+  showModal({
+    img: DollArt.url(top), color: '#ffd23f', badge: '🧺 일괄 판매',
+    name: `${items.length}종 ${n}개 팔기`, msg: `🪙 ${v}코인을 받아요`,
+    desc: lastOnes ? `⚠️ ${lastOnes}종은 마지막 1개까지 팔려서 진열장에서 비게 돼요 (도감 기록은 남아요).` : '종류마다 1개씩은 진열장에 남겨요.',
+    buttons: [
+      { label: `팔기 (+${v}코인)`, cls: 'gold', fn: () => {
+        if (!bulk) return;
+        let total = 0, count = 0;
+        for (const id of bulk.sel) {
+          const d = DOLL_BY_ID[id], q = bulkQty(d), r = save.owned[id];
+          if (!q || !r) continue;
+          total += q * sellPrice(d); count += q;
+          r.count -= q; r.sold = (r.sold || 0) + q;
+        }
+        save.coins += total;
+        bulk = null;
+        persist(); renderCoins(); bumpWallet(); renderShelf();
+        toast(`🧺 인형 ${count}개를 한 번에 팔아 🪙 ${total}코인을 받았어요`);
+      } },
+      { label: '취소' },
+    ],
+  });
+};
 
 function openDollDetail(d) {
   const rec = save.owned[d.id];

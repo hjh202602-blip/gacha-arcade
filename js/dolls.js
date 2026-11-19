@@ -53,7 +53,9 @@ const MACHINES = [
     desc: '블록을 멈춰 한 층씩 쌓기. 꼭대기 12층이면 전설!',
     theme: { cab: '#ff4fa0', cab2: '#a3195e', inside: ['#160a1e', '#2a1236'], floor: '#0b0510' },
     rules: { S: '꼭대기 12층', A: '10층', B: '8층', C: '6층', D: '4층' } },
+  // weights: 이 기계만의 등급 출현 가중치 (없으면 GRADES의 weight)
   { id: 'pusher', type: 'pusher', unlock: 30, name: '코인 푸셔', level: 2, levelText: '밀어내기',
+    weights: { S: 6, A: 14, B: 24, C: 30, D: 26 },
     desc: '코인을 떨어뜨려 밀어내기! 앞으로 떨어진 코인은 내 것, 인형도 밀어서 떨어뜨려요',
     theme: { cab: '#ffb000', cab2: '#b86e00', inside: ['#2b1f3a', '#3d2a55'], floor: '#1a1124' } },
 ];
@@ -290,12 +292,17 @@ const SpecialState = (() => {
 // 기계에 지금 들어 있는 인형들 (특별 뽑기 중이면 특별 인형)
 const dollsOf = machineId => (SpecialState.has(machineId) ? SPECIAL_POOL[machineId] : REGULAR_POOL[machineId] || []).slice();
 
+// 등급 출현 가중치 (기계마다 따로 정할 수 있음)
+const gradeWeight = (machineId, g) => {
+  const w = MACHINE_BY_ID[machineId] && MACHINE_BY_ID[machineId].weights;
+  return w && w[g] != null ? w[g] : GRADES[g].weight;
+};
 // 기계 안에서 등급 가중치로 하나 뽑기
 const pickDoll = machineId => {
   const pool = dollsOf(machineId);
-  const total = pool.reduce((s, d) => s + GRADES[d.grade].weight, 0);
+  const total = pool.reduce((s, d) => s + gradeWeight(machineId, d.grade), 0);
   let roll = Math.random() * total;
-  for (const d of pool) if ((roll -= GRADES[d.grade].weight) < 0) return d;
+  for (const d of pool) if ((roll -= gradeWeight(machineId, d.grade)) < 0) return d;
   return pool[pool.length - 1];
 };
 // 정해진 등급 안에서 무작위로 하나
@@ -309,8 +316,8 @@ const pickOfGrade = (machineId, grade, exclude) => {
 // 기계별 출현 확률(%)
 const dollOdds = machineId => {
   const pool = dollsOf(machineId);
-  const total = pool.reduce((s, d) => s + GRADES[d.grade].weight, 0);
-  return Object.fromEntries(pool.map(d => [d.id, (GRADES[d.grade].weight / total) * 100]));
+  const total = pool.reduce((s, d) => s + gradeWeight(machineId, d.grade), 0);
+  return Object.fromEntries(pool.map(d => [d.id, (gradeWeight(machineId, d.grade) / total) * 100]));
 };
 
 // ================= 인형 그리기 =================

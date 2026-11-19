@@ -345,13 +345,31 @@
       </div>
       <div class="sell-bar">
         <span id="sell-info"></span>
-        <button id="sell-dupes" class="sell-btn">중복 인형 모두 팔기</button>
+        <div class="sell-actions">
+          <button id="bulk-start" class="sell-btn">🧺 골라서 일괄 판매</button>
+          <button id="sell-dupes" class="sell-btn">중복 인형 모두 팔기</button>
+        </div>
       </div>
       <div class="shelf-tabs" id="shelf-tabs"></div>
       <div id="shelf-body"></div>
 
       <h2 class="history-title">최근 뽑기 기록</h2>
       <ol class="history" id="history"></ol>
+
+      <div class="bulk-bar" id="bulk-bar" hidden>
+        <div class="bulk-tools">
+          <span>빠른 선택</span>
+          <button data-bulk="all">전체</button>
+          <button data-bulk="D">D</button><button data-bulk="C">C</button><button data-bulk="B">B</button><button data-bulk="A">A</button><button data-bulk="S">S</button>
+          <button data-bulk="none">선택 해제</button>
+          <label class="bulk-keep"><input type="checkbox" id="bulk-keep" checked> 종류마다 1개 남기기</label>
+        </div>
+        <div class="bulk-sum">
+          <span id="bulk-info"></span>
+          <button class="sell-btn" id="bulk-sell">팔기</button>
+          <button class="bulk-cancel" id="bulk-cancel">취소</button>
+        </div>
+      </div>
     </div>
   </section>
 

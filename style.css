@@ -988,3 +988,36 @@ button:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, va
   position: absolute; top: 22px; right: 2px; z-index: 1; padding: 1px 6px; border-radius: 999px;
   background: #ec3b4b; color: #fff; font-size: 11px; font-weight: 900;
 }
+
+/* ================= 일괄 판매 ================= */
+.sell-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.bulk-bar {
+  position: sticky; bottom: 12px; z-index: 15; margin-top: 18px; padding: 12px 14px;
+  border-radius: var(--r-lg); background: rgba(22,15,46,.94); backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-2), inset 0 0 0 2px rgba(255,212,92,.5);
+  display: grid; gap: 10px; animation: toastIn .4s var(--spring);
+}
+.shelf-view.bulk-on .shelf-wrap { padding-bottom: 20px; }
+.shelf-view.bulk-on .sell-bar { display: none; }
+.bulk-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.bulk-tools button { padding: 6px 12px; border-radius: var(--r-pill); background: var(--surface-2); border: 1.5px solid rgba(255,255,255,.25); font-weight: 800; color: var(--text); }
+.bulk-tools button:hover { background: rgba(255,212,92,.25); }
+.bulk-keep { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--text); font-weight: 700; cursor: pointer; }
+.bulk-keep input { width: 18px; height: 18px; accent-color: #ffc21f; }
+.bulk-sum { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bulk-sum #bulk-info { flex: 1; min-width: 180px; color: var(--muted); }
+.bulk-sum #bulk-info b { color: var(--text); } .bulk-sum #bulk-info .gold { color: var(--yellow); font-size: 18px; }
+.bulk-cancel { padding: 10px 16px; border-radius: var(--r-md); background: var(--surface-2); border: 2px solid rgba(255,255,255,.4); font-weight: 800; }
+
+.doll-card.pick { box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+.doll-card.pick.on { background: rgba(255,212,92,.2); box-shadow: inset 0 0 0 3px var(--yellow), 0 0 18px rgba(255,212,92,.4); transform: translateY(-4px); }
+.doll-card.nopick { opacity: .35; cursor: default; }
+.doll-card.nopick:hover { transform: none; }
+.pick-mark {
+  position: absolute; top: 4px; left: 4px; z-index: 2; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid #fff; background: rgba(0,0,0,.4); color: #3b2300; font-size: 13px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+}
+.doll-card.pick.on .pick-mark { background: var(--yellow); animation: badgePop .35s var(--spring); }
+.pick-qty { display: block; font-size: 11px; font-weight: 800; color: var(--yellow); }
+.doll-card.pick.new::before, .doll-card.nopick.new::before { display: none; }
