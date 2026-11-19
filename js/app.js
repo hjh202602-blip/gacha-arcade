@@ -69,7 +69,8 @@ function sanitize(d, caps) {
   if (dl && typeof dl.day === 'string' && Array.isArray(dl.picks)) {
     out.daily = {
       day: dl.day,
-      picks: dl.picks.filter(p => p && DOLL_BY_ID[p.id]).slice(0, 3).map(p => ({ id: p.id, price: num(p.price, 1, 999, 1), bought: !!p.bought })),
+      picks: dl.picks.filter(p => p && DOLL_BY_ID[p.id] && Number.isFinite(+p.mult)).slice(0, 3)
+        .map(p => ({ id: p.id, mult: Math.min(2.5, Math.max(1.5, Math.round(+p.mult * 10) / 10)) })),
       free: dl.free == null ? null : num(dl.free, 0, 15, 0),
     };
   }
@@ -123,7 +124,10 @@ const ownedCount = id => (save.owned[id] ? save.owned[id].count : 0);
 const found = id => !!save.owned[id];
 const isUnlocked = m => !m.unlock || save.unlocked.includes(m.id);
 const priceOf = m => (m && m.price) || 1;
-const sellPrice = d => GRADES[d.grade].sell;
+const baseSell = d => GRADES[d.grade].sell;
+// 오늘의 인형이면 판매가에 배율이 붙음
+const dailyMult = id => { const dl = save.daily; if (!dl || dl.day !== dayKey()) return 0; const p = dl.picks.find(x => x.id === id); return p ? p.mult : 0; };
+const sellPrice = d => { const m = dailyMult(d.id); return m ? Math.round(baseSell(d) * m) : baseSell(d); };
 const byGrade = (a, b) => GRADE_ORDER.indexOf(a.grade) - GRADE_ORDER.indexOf(b.grade);
 
 function toast(msg) {
@@ -370,8 +374,9 @@ function unlock(m) {
 }
 
 // ================= 오늘의 인형 TOP 3 · 오늘의 무료 코인 =================
-// C~S 등급에서 무작위 (높은 등급일수록 드묾), 가격은 판매가의 ±10%
+// C~S 등급에서 무작위 (높은 등급일수록 드묾). 오늘 하루 이 인형을 팔면 판매가가 x1.5~2.5
 const DAILY_W = [['C', 50], ['B', 30], ['A', 15], ['S', 5]];
+const MULT_W = [[1.5, 40], [1.8, 30], [2.0, 18], [2.2, 8], [2.5, 4]];   // 배율과 확률(%)
 function makeDaily(day, seed) {
   const r = rng(seed);
   const picks = [], used = new Set();
@@ -381,15 +386,19 @@ function makeDaily(day, seed) {
     const pool = DOLLS.filter(d => !d.special && d.grade === g && !used.has(d.id));
     const d = pool[Math.floor(r() * pool.length)];
     used.add(d.id);
-    picks.push({ id: d.id, price: Math.max(1, Math.round(sellPrice(d) * (0.9 + r() * 0.2))), bought: false });
+    let mr = r() * 100, mult = 1.5;
+    for (const [m, w] of MULT_W) if ((mr -= w) < 0) { mult = m; break; }
+    picks.push({ id: d.id, mult });
   }
-  picks.sort((a, b) => byGrade(DOLL_BY_ID[a.id], DOLL_BY_ID[b.id]));
+  picks.sort((a, b) => b.mult - a.mult || byGrade(DOLL_BY_ID[a.id], DOLL_BY_ID[b.id]));
   return { day, picks, free: null };
 }
 function ensureDaily() {
   const day = dayKey();
-  if (!save.daily || save.daily.day !== day) {
-    save.daily = makeDaily(day, strSeed(`daily:${day}:${save.seed}`));
+  if (!save.daily || save.daily.day !== day || save.daily.picks.length < 3) {
+    const free = save.daily && save.daily.day === day ? save.daily.free : null;   // 같은 날 무료 코인 기록은 유지
+    save.daily = makeDaily(day, strSeed(`daily2:${day}:${save.seed}`));
+    save.daily.free = free;
     persist();
   }
   return save.daily;
@@ -397,17 +406,17 @@ function ensureDaily() {
 
 function renderDaily() {
   const dl = ensureDaily();
-  $('daily-date').textContent = `${dl.day.replace(/-/g, '.')} · 매일 자정에 바뀌어요`;
+  $('daily-date').textContent = `${dl.day.replace(/-/g, '.')} · 오늘 이 인형을 팔면 판매가가 올라요 · 자정에 바뀌어요`;
   $('daily-picks').innerHTML = dl.picks.map((p, i) => {
-    const d = DOLL_BY_ID[p.id], base = sellPrice(d), pct = Math.round(((p.price - base) / base) * 100);
-    const tag = pct < 0 ? `<em class="down">▼${-pct}%</em>` : pct > 0 ? `<em class="up">▲${pct}%</em>` : '<em>정가</em>';
-    return `<div class="daily-card" style="${gradeStyle(d.grade)}">
+    const d = DOLL_BY_ID[p.id], base = baseSell(d), now = sellPrice(d), n = ownedCount(d.id);
+    return `<div class="daily-card ${p.mult >= 2.2 ? 'hot' : ''}" style="${gradeStyle(d.grade)}">
       <span class="daily-rank">${i + 1}위</span>
+      <span class="daily-mult">x${p.mult.toFixed(1)}</span>
       <button class="daily-pedestal" data-look="${p.id}" aria-label="${d.name} 자세히"><img src="${DollArt.url(d)}" alt="${d.name}"></button>
-      <div class="daily-name"><span class="grade-badge" style="${gradeStyle(d.grade)}">${d.grade}</span>${d.name}</div>
-      <div class="daily-mc">${MACHINE_BY_ID[d.machine].name}${found(d.id) ? '' : ' · 도감에 없음'}</div>
-      <div class="daily-price"><s>🪙${base}</s> <b>🪙${p.price}</b> ${tag}</div>
-      <button class="sell-btn" data-buy="${i}" ${p.bought || save.coins < p.price ? 'disabled' : ''}>${p.bought ? '✔ 구매 완료' : `🪙 ${p.price}코인에 사기`}</button>
+      <div class="daily-name"><span class="grade-badge" style="${gradeStyle(d.grade)}">${d.grade}</span>${found(d.id) ? d.name : '???'}</div>
+      <div class="daily-mc">${MACHINE_BY_ID[d.machine].name} · ${n ? `보유 ${n}개` : '없음'}</div>
+      <div class="daily-price">판매가 <s>🪙${base}</s> → <b>🪙${now}</b></div>
+      <button class="sell-btn" data-sell="${p.id}" ${n ? '' : 'disabled'}>${n ? `🪙 ${now}코인에 팔기` : '가지고 있지 않아요'}</button>
     </div>`;
   }).join('');
   const btn = $('daily-free-btn');
@@ -417,28 +426,11 @@ function renderDaily() {
 }
 
 $('daily-picks').addEventListener('click', e => {
-  const look = e.target.closest('[data-look]');
-  if (look) { const d = DOLL_BY_ID[look.dataset.look]; showModal(dollModal(d, `${MACHINE_BY_ID[d.machine].name}의 인형 · 판매가 🪙${sellPrice(d)}`)); return; }
-  const b = e.target.closest('[data-buy]');
+  const b = e.target.closest('[data-look], [data-sell]');
   if (!b) return;
-  const dl = ensureDaily();
-  const p = dl.picks[+b.dataset.buy];
-  if (!p || p.bought) return;
-  if (clockBack()) { toast('기기 시간이 이상해요. 시간을 맞춘 뒤 다시 시도해 주세요'); return; }
-  const d = DOLL_BY_ID[p.id];
-  if (save.coins < p.price) { toast(`코인이 부족해요 (🪙${p.price}코인 필요)`); return; }
-  showModal({
-    ...dollModal(d, `🪙 ${p.price}코인에 살까요? (판매가 🪙${sellPrice(d)})`),
-    buttons: [
-      { label: `🪙 ${p.price}코인에 사기`, cls: 'gold', fn: () => {
-        if (p.bought || !spend(p.price)) return;
-        p.bought = true;
-        giveDoll(d, `오늘의 인형 ${+b.dataset.buy + 1}위 구매`);
-        renderDaily();
-      } },
-      { label: '그만두기' },
-    ],
-  });
+  const d = DOLL_BY_ID[b.dataset.look || b.dataset.sell];
+  if (found(d.id)) openDollDetail(d);
+  else showModal({ ...dollModal(d, `'${MACHINE_BY_ID[d.machine].name}'에서 뽑을 수 있어요 · 오늘 팔면 🪙${sellPrice(d)}`), locked: true, name: '???', desc: '아직 정체를 알 수 없는 인형이에요.' });
 });
 
 $('daily-free-btn').onclick = () => {
@@ -691,6 +683,7 @@ function renderShelf() {
         const cls = !f ? 'locked' : n ? '' : 'sold';
         return `<button class="doll-card ${cls} ${n && recent.has(d.id) ? 'new' : ''} ${d.special ? 'sp' : ''}" data-doll="${d.id}" title="${f ? d.name : '아직 못 뽑은 인형'}">
           ${n > 1 ? `<span class="cnt">x${n}</span>` : ''}
+          ${dailyMult(d.id) ? `<span class="boost">🔥x${dailyMult(d.id).toFixed(1)}</span>` : ''}
           <img src="${DollArt.url(d)}" alt="${f ? d.name : '미획득'}">
           <span class="nm">${f ? d.name : '???'}</span>
           <span class="mc">${MACHINE_BY_ID[d.machine].name}${d.special ? ' · 특별' : ''}</span>
@@ -727,13 +720,14 @@ function openDollDetail(d) {
     showModal({ ...dollModal(d, where), locked: true, name: '???', desc: '아직 정체를 알 수 없는 인형이에요.' });
     return;
   }
-  const p = sellPrice(d), n = rec.count;
+  const p = sellPrice(d), n = rec.count, m = dailyMult(d.id);
+  const boost = m ? ` · 🔥 오늘의 인형 x${m.toFixed(1)}` : '';
   const buttons = [];
   if (n > 1) buttons.push({ label: `중복 ${n - 1}개 팔기 (+${(n - 1) * p}코인)`, cls: 'gold', fn: () => { sellDoll(d, n - 1); openDollDetail(d); } });
   if (n > 0) buttons.push({ label: `1개 팔기 (+${p}코인)${n === 1 ? ' · 마지막 1개' : ''}`, cls: n === 1 ? '' : 'gold', fn: () => { sellDoll(d, 1); openDollDetail(d); } });
   buttons.push({ label: '닫기' });
   showModal({
-    ...dollModal(d, n ? `보유 ${n}개 · 판매가 개당 🪙${p} · 처음 뽑은 날 ${fmtTime(rec.first)}` : `지금은 가지고 있지 않아요 (판매함) · 처음 뽑은 날 ${fmtTime(rec.first)}`),
+    ...dollModal(d, n ? `보유 ${n}개 · 판매가 개당 🪙${p}${boost} · 처음 뽑은 날 ${fmtTime(rec.first)}` : `지금은 가지고 있지 않아요 (판매함) · 처음 뽑은 날 ${fmtTime(rec.first)}`),
     locked: !n, buttons,
   });
 }
@@ -900,7 +894,7 @@ function renderDevInfo() {
   $('dev-info').innerHTML = `
     <div>코인 <b>${save.coins}</b> · 도감 <b>${DOLLS.filter(d => found(d.id)).length}/${DOLLS.length}</b> · 해금 <b>${MACHINES.filter(isUnlocked).length}/${MACHINES.length}</b></div>
     <div>특별 뽑기: ${ev ? `<b>진행 중</b> (${ev.ids.map(id => MACHINE_BY_ID[id].name).join(', ')})` : `다음 ${hhmm(nextSpecialStart())}`}</div>
-    <div>오늘의 TOP3: ${dl.picks.map(p => `${DOLL_BY_ID[p.id].grade} ${p.price}`).join(' / ')} · 무료코인 ${dl.free == null ? '안 받음' : `+${dl.free}`}</div>`;
+    <div>오늘의 TOP3: ${dl.picks.map(p => `${DOLL_BY_ID[p.id].grade} x${p.mult.toFixed(1)}`).join(' / ')} · 무료코인 ${dl.free == null ? '안 받음' : `+${dl.free}`}</div>`;
 }
 
 const DEV_ACTIONS = {
@@ -922,7 +916,7 @@ const DEV_ACTIONS = {
     if (ev) devSpecial = { key: `off${Date.now()}`, start: 0, end: ev.end, ids: [] };
     applySpecial();
   },
-  dailyReroll: () => { save.daily = makeDaily(dayKey(), 1 + Math.floor(Math.random() * 2e9)); persist(); refreshAll(); },
+  dailyReroll: () => { const free = ensureDaily().free; save.daily = makeDaily(dayKey(), 1 + Math.floor(Math.random() * 2e9)); save.daily.free = free; persist(); refreshAll(); },
   freeReset: () => { ensureDaily().free = null; persist(); refreshAll(); },
   allDolls: () => {
     const now = Date.now();
