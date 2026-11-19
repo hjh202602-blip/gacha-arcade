@@ -534,3 +534,181 @@ a { color: inherit; }
   .pad { width: 56px; height: 56px; }
   .drop { width: 90px; height: 60px; font-size: 20px; }
 }
+
+/* =====================================================================
+   디자인 다듬기: 색감 · radius · 움직이는 버튼
+   ===================================================================== */
+:root {
+  --bg: #15102a;
+  --surface: rgba(255,255,255,.06);
+  --surface-2: rgba(255,255,255,.1);
+  --line: rgba(255,255,255,.1);
+  --text: #f7f3ff;
+  --muted: #b4a8d6;
+  --pink: #ff6fae;
+  --cyan: #5ee6ff;
+  --yellow: #ffd45c;
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --smooth: cubic-bezier(.22, .61, .36, 1);
+  --shadow-1: 0 6px 18px rgba(8, 4, 20, .35);
+  --shadow-2: 0 16px 40px rgba(8, 4, 20, .5);
+}
+body {
+  font-family: "Pretendard Variable", "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -.01em;
+}
+::selection { background: color-mix(in srgb, var(--pink) 45%, transparent); }
+
+/* 화면 전환 */
+.view:not([hidden]) { animation: viewIn .4s var(--smooth); }
+@keyframes viewIn { from { opacity: 0; transform: translateY(10px); } }
+
+/* 상단바 */
+.topbar { background: rgba(16, 11, 34, .72); backdrop-filter: blur(14px) saturate(1.4); border-bottom-color: var(--line); }
+.logo { transition: transform .3s var(--spring); }
+.logo:hover { transform: scale(1.05) rotate(-2deg); }
+.nav a { transition: background .25s var(--smooth), color .2s, transform .25s var(--spring); }
+.nav a:hover { background: var(--surface); transform: translateY(-1px); }
+.nav a.on { background: linear-gradient(135deg, color-mix(in srgb, var(--pink) 40%, transparent), color-mix(in srgb, var(--pink) 18%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pink) 45%, transparent); }
+.wallet { background: var(--surface-2); box-shadow: inset 0 0 0 1px rgba(255,212,92,.3); }
+.wallet.bump { animation: bump .5s var(--spring); }
+@keyframes bump { 40% { transform: scale(1.22); box-shadow: 0 0 22px rgba(255,212,92,.6), inset 0 0 0 1px rgba(255,212,92,.6); } }
+
+/* ---------- 공통 버튼 움직임 ---------- */
+button, .mcab, .shelf-door { -webkit-tap-highlight-color: transparent; }
+.act, .coin, .changer-btn, .sell-btn, #modal-ok, .modal-actions button, .shelf-tabs button, .drop, .pad {
+  position: relative; overflow: hidden; isolation: isolate;
+  transition: transform .28s var(--spring), box-shadow .28s var(--smooth), filter .2s, background .25s;
+}
+/* 반짝이 띠 */
+.act::after, .coin::after, .changer-btn::after, .sell-btn::after, #modal-ok::after,
+.modal-actions button.primary::after, .modal-actions button.gold::after, .drop::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+.act:not(:disabled)::after, .drop:not(:disabled)::after { animation: shine 3.6s var(--smooth) infinite; }
+.coin:not(:disabled):hover::after, .changer-btn:hover::after, .sell-btn:not(:disabled):hover::after,
+#modal-ok:hover::after, .modal-actions button:not(:disabled):hover::after { animation: shine .8s var(--smooth); }
+@keyframes shine { 0% { transform: translateX(-120%); } 35%, 100% { transform: translateX(120%); } }
+
+.act:hover:not(:disabled), .coin:hover:not(:disabled), .sell-btn:hover:not(:disabled),
+#modal-ok:hover, .modal-actions button:hover:not(:disabled), .changer-btn:hover {
+  transform: translateY(-3px); filter: brightness(1.07) saturate(1.05);
+}
+.shelf-tabs button:hover { transform: translateY(-2px); background: var(--surface-2); color: var(--text); }
+.shelf-tabs button.on { background: linear-gradient(135deg, #ff86bc, #ff4f97); box-shadow: 0 6px 16px rgba(255,79,151,.35); }
+.shelf-tabs button.on:hover { background: linear-gradient(135deg, #ff86bc, #ff4f97); }
+.pad:hover:not(:disabled), .drop:hover:not(:disabled) { filter: brightness(1.08); }
+/* 눌림은 맨 뒤에 두어 hover보다 우선 */
+.act:active:not(:disabled), .coin:active:not(:disabled), .sell-btn:active:not(:disabled),
+#modal-ok:active, .modal-actions button:active:not(:disabled), .changer-btn:active, .shelf-tabs button:active {
+  transform: translateY(2px) scale(.97); transition-duration: .08s;
+}
+.pad:active, .pad.held { transform: translateY(4px) scale(.96); transition-duration: .06s; }
+.drop:active { transform: translateY(4px) scale(.97); transition-duration: .06s; }
+button:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, var(--cyan) 70%, transparent); outline-offset: 3px; }
+
+/* 클릭 물결 (js/fx.js) */
+.ripple {
+  position: absolute; border-radius: 50%; pointer-events: none; z-index: 0;
+  background: rgba(255,255,255,.45); transform: scale(0); opacity: .7;
+  animation: ripple .6s var(--smooth) forwards;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+/* 메인 행동 버튼: 은은하게 숨쉬는 빛 */
+.act { border-radius: var(--r-lg); background: linear-gradient(180deg, #ffe680, #ffc21f); box-shadow: 0 6px 0 #b98800, 0 10px 24px rgba(255,194,31,.25); }
+.act:not(:disabled):not(.stop) { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { box-shadow: 0 6px 0 #b98800, 0 12px 34px rgba(255,194,31,.5); } }
+.act:active:not(:disabled) { box-shadow: 0 2px 0 #b98800, 0 4px 12px rgba(255,194,31,.25); animation: none; }
+.act.stop { background: linear-gradient(180deg, #ff8f86, #ec3b4b); box-shadow: 0 6px 0 #8f1622, 0 10px 26px rgba(236,59,75,.4); animation: stopPulse .9s ease-in-out infinite; }
+@keyframes stopPulse { 50% { box-shadow: 0 6px 0 #8f1622, 0 10px 40px rgba(236,59,75,.75); } }
+.act:disabled, .pad:disabled, .drop:disabled { filter: grayscale(.75) brightness(.7); transform: none; }
+.coin { border-radius: var(--r-md); background: linear-gradient(180deg, #ffe27a, #ffc93a); box-shadow: 0 4px 0 #b98800; }
+.coin:active:not(:disabled) { box-shadow: 0 1px 0 #b98800; }
+.drop { background: radial-gradient(circle at 35% 28%, #fff4a0, #ffc21f 70%); }
+.pad { background: radial-gradient(circle at 35% 28%, #a6f6ff, #26b2d4 75%); }
+
+/* ---------- 매장 ---------- */
+.mcab { transition: transform .45s var(--spring), filter .3s var(--smooth); animation: cabIn .6s var(--spring) backwards; }
+.machine-row .mcab:nth-child(1) { animation-delay: .02s } .machine-row .mcab:nth-child(2) { animation-delay: .06s }
+.machine-row .mcab:nth-child(3) { animation-delay: .1s }  .machine-row .mcab:nth-child(4) { animation-delay: .14s }
+.machine-row .mcab:nth-child(5) { animation-delay: .18s } .machine-row .mcab:nth-child(6) { animation-delay: .22s }
+.machine-row .mcab:nth-child(7) { animation-delay: .26s } .machine-row .mcab:nth-child(8) { animation-delay: .3s }
+.machine-row .mcab:nth-child(9) { animation-delay: .34s } .machine-row .mcab:nth-child(10) { animation-delay: .38s }
+.machine-row .mcab:nth-child(11) { animation-delay: .42s } .machine-row .mcab:nth-child(12) { animation-delay: .46s }
+@keyframes cabIn { from { opacity: 0; transform: translateY(24px) scale(.96); } }
+.mcab:hover { transform: translateY(-10px) scale(1.02); }
+.mcab:active { transform: translateY(-4px) scale(.98); transition-duration: .1s; }
+.mcab-top { border-radius: var(--r-xl) var(--r-xl) 0 0; border-width: 2px; }
+.mcab-base { border-radius: 0 0 var(--r-lg) var(--r-lg); border-width: 2px; }
+.mcab-body { border-left-width: 2px; border-right-width: 2px; }
+.mcab-glass { border-radius: var(--r-md); border-width: 3px; }
+.mcab-glass img { transition: transform .5s var(--smooth); }
+.mcab:hover .mcab-glass img { transform: scale(1.05); }
+.mcab-glass::after { transform: translateX(-60%); transition: transform .9s var(--smooth); }
+.mcab:hover .mcab-glass::after { transform: translateX(60%); }
+.mcab-panel, .chute-door, .coin-slot { border-radius: var(--r-sm); }
+.mcab .lock { border-radius: var(--r-lg); backdrop-filter: blur(4px); }
+.price-tag { border-radius: var(--r-pill); transition: transform .3s var(--spring); }
+.mcab:hover .price-tag { transform: rotate(-6deg) scale(1.1); }
+
+.changer, .shelf-door, .grade-board { border-radius: var(--r-xl); border-width: 2px; box-shadow: var(--shadow-2); transition: transform .4s var(--spring), box-shadow .3s; }
+.changer:hover, .shelf-door:hover { transform: translateY(-6px); box-shadow: 0 22px 46px rgba(8,4,20,.6); }
+.changer:active { transform: scale(.97); transition-duration: .1s; }
+.changer-btn { border-radius: var(--r-pill); }
+.changer-screen, .door-sign { border-radius: var(--r-sm); }
+.grade-board { background: linear-gradient(160deg, #241a45, #1a1333); border-color: var(--line); }
+.grade-board li { transition: transform .25s var(--spring); }
+.grade-board li:hover { transform: translateX(4px); }
+.grade-badge { border-radius: 8px; }
+
+/* ---------- 뽑기 화면 ---------- */
+.back { padding: 6px 12px 6px 8px; border-radius: var(--r-pill); transition: background .2s, transform .3s var(--spring), color .2s; }
+.back:hover { background: var(--surface); transform: translateX(-4px); }
+.cabinet { border-radius: 34px 34px var(--r-xl) var(--r-xl); }
+#claw-canvas, .game-canvas { border-radius: var(--r-lg); border-width: 4px; }
+.timer-screen { border-radius: var(--r-lg); border-width: 4px; }
+.panel { border-radius: var(--r-lg); background: rgba(10,6,24,.35); }
+.status { border-radius: var(--r-md); box-shadow: inset 0 0 0 1px rgba(94,230,255,.15); }
+.lineup-box { border-radius: var(--r-xl); background: rgba(18,12,38,.72); backdrop-filter: blur(10px); border-color: var(--line); box-shadow: var(--shadow-1); }
+.lineup li { border-radius: var(--r-md); border-left: none; box-shadow: inset 3px 0 0 var(--g); transition: transform .3s var(--spring), background .2s; }
+.lineup li:hover { transform: translateX(4px); background: var(--surface-2); }
+.lineup img { transition: transform .4s var(--spring); }
+.lineup li:hover img { transform: scale(1.12) rotate(-6deg); }
+
+/* ---------- 진열장 ---------- */
+.stat, .sell-bar, .history li { border-radius: var(--r-md); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.sell-btn { border-radius: var(--r-md); box-shadow: 0 4px 0 #b98800; }
+.plank { border-radius: var(--r-md) var(--r-md) 4px 4px; }
+.doll-card { border-radius: var(--r-md); transition: transform .4s var(--spring), background .2s; }
+.doll-card:hover { transform: translateY(-6px); background: rgba(255,255,255,.06); }
+.doll-card:hover img { animation: wiggle .6s ease-in-out; }
+@keyframes wiggle { 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+.doll-card:active { transform: translateY(-2px) scale(.96); transition-duration: .08s; }
+.history li { transition: transform .25s var(--spring); }
+.history li:hover { transform: translateX(4px); }
+
+/* ---------- 팝업 / 알림 ---------- */
+.modal { background: rgba(12,7,28,.6); backdrop-filter: blur(8px); animation: fadeIn .25s; }
+@keyframes fadeIn { from { opacity: 0; } }
+.modal-card {
+  border-radius: 30px; border-width: 2px;
+  background: linear-gradient(160deg, #352665, #1e1540);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--g, var(--pink)) 14%, transparent), 0 24px 60px rgba(0,0,0,.55), 0 0 60px color-mix(in srgb, var(--g, var(--pink)) 45%, transparent);
+  animation: zoom .5s var(--spring);
+}
+@keyframes zoom { from { transform: scale(.6) translateY(20px); opacity: 0; } }
+#modal-ok, .modal-actions button { border-radius: var(--r-md); }
+#modal-ok, .modal-actions button.primary { background: linear-gradient(180deg, #ff8cc0, #ff4f97); box-shadow: 0 4px 0 #b52766; }
+.modal-actions button.gold { background: linear-gradient(180deg, #ffe27a, #ffc93a); box-shadow: 0 4px 0 #b98800; }
+.toast { border-radius: var(--r-lg); border-width: 1px; background: rgba(30,21,64,.92); backdrop-filter: blur(10px); animation: toastIn .45s var(--spring); }
+@keyframes toastIn { from { transform: translate(-50%, 24px) scale(.9); opacity: 0; } }
+
+/* 움직임 줄이기 설정을 켠 사용자 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
