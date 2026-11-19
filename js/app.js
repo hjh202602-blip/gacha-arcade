@@ -560,8 +560,8 @@ function spendCoin() {
 ClawGame.init($('claw-canvas'), {
   spendCoin,
   onWin: doll => award(doll),
-  onGrab(q) {
-    $('claw-status').textContent = q > 0.85 ? '정중앙! 꽉 잡았다' : q > 0.6 ? '살짝 빗나갔다...' : '가장자리를 집었다...';
+  onGrab(q, zone) {
+    $('claw-status').textContent = zone === 'center' ? '정중앙! 꽉 잡았다' : zone === 'near' ? '아깝다, 살짝 빗나갔다… 걸릴까?' : '옆을 건드렸다! 밀려난다';
     lastStatus = '앗';
   },
   onSlip() {

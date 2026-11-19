@@ -132,6 +132,11 @@ const ClawGame = (() => {
     return y;
   }
 
+  // 정중앙으로 치는 범위 (q = 1 - 중심에서 벗어난 거리 / 인형 반지름)
+  // 쉬운 기계는 넓게, 어려운 기계는 좁게
+  const centerZone = m => (m.level >= 4 ? 0.86 : m.level >= 3 ? 0.82 : 0.74);
+  const NEAR_ZONE = 0.4;
+
   function startClose(c) {
     const gx = c.x, gy = c.y + GRIP_Y;
     let best = null, bd = Infinity;
@@ -146,10 +151,28 @@ const ClawGame = (() => {
     if (best) {
       const q = 1 - Math.min(1, Math.abs(best.x - gx) / best.r); // 중앙에 가까울수록 1
       const g = GRADES[best.doll.grade];
-      // 세제곱이라 정중앙에서 조금만 벗어나도 확률이 크게 떨어짐 (q=1 → 0.95, 0.8 → 0.51, 0.5 → 0.16)
-      c.willHold = Math.random() < (0.05 + 0.9 * q ** 3) * g.hold * machine.power;
-      c.slipChance = Math.min(0.95, g.slip * (0.25 + 1.5 * (1 - q)) + (1 - machine.power) * 0.5);
-      hooks.onGrab && hooks.onGrab(q);
+      // 잡는 위치를 세 구역으로 나눔
+      //  정중앙: 거의 확실히 들어 올림 (어려운 기계일수록 구역이 좁음)
+      //  가까움: 가까울수록 들어 올릴 확률이 오르고, 들고 가다 떨어뜨릴 확률은 10% 미만
+      //  옆:    못 잡고 옆으로 밀려남 (중앙에 가까웠을수록 세게 밀림)
+      const zc = centerZone(machine), zn = NEAR_ZONE;
+      const zone = q >= zc ? 'center' : q >= zn ? 'near' : 'side';
+      const gradeHold = 0.55 + 0.45 * g.hold;            // D 1.0 … S 0.75
+      const power = 0.6 + 0.4 * machine.power;           // 집게 힘 100% → 1.0, 65% → 0.86
+      let lift = 0, drop = 0;
+      if (zone === 'center') {
+        lift = 0.97 * gradeHold * power;
+        drop = 0.01 + g.slip * 0.03;                     // D 1.8% … S 3.6%
+      } else if (zone === 'near') {
+        const k = (q - zn) / (zc - zn);                  // 0(옆 쪽) ~ 1(정중앙 쪽)
+        // 어려운 기계(집게 힘이 약함)일수록 '가까움'으로는 잘 안 걸림
+        lift = (0.12 + 0.5 * k) * gradeHold * machine.power ** 2;
+        drop = 0.04 + g.slip * 0.05;                     // D 5.3% … S 8.3%
+      }
+      c.willHold = Math.random() < lift;
+      c.slipChance = Math.min(0.095, drop);
+      c.pushQ = q;
+      hooks.onGrab && hooks.onGrab(q, zone);
       if (c.willHold) c.closeTo = best.r / 34;
     }
     c.state = 'close';
@@ -184,8 +207,10 @@ const ClawGame = (() => {
             const est = (c.y - HOME_Y) / 160 + (c.x - HOME_X) / 140;
             c.slipTime = Math.random() < c.slipChance ? rand(0.2, Math.max(0.3, est)) : -1;
           } else if (p) {
-            p.vx += (p.x < c.x ? -1 : 1) * rand(40, 120); // 미끄러지며 살짝 밀림
-            p.vy -= rand(80, 180);
+            // 못 잡으면 옆으로 밀려남. 중앙에 가까웠을수록 세게 밀림
+            const k = c.pushQ || 0;
+            p.vx += (p.x < c.x ? -1 : 1) * (50 + 210 * k) * rand(0.85, 1.15);
+            p.vy -= 60 + 80 * k;
           }
           c.state = 'rise'; c.t = 0;
         }
