@@ -29,6 +29,11 @@ function toast(msg) {
 function addCoins(n) {
   save.coins += n; persist(); renderCoins(); bumpWallet();
 }
+// 판이 취소됐을 때 넣은 코인 돌려주기
+function refund(n, why) {
+  addCoins(n);
+  toast(`${why} · 🪙 ${n}코인을 돌려받았어요`);
+}
 const gradeStyle = g => `--g:${GRADES[g].color}`;
 const stars = n => '★'.repeat(n) + '☆'.repeat(4 - n);
 const LEVEL_NAME = ['', '쉬움', '보통', '어려움', '매우 어려움'];
@@ -168,7 +173,9 @@ function openMachine(m) {
   sec.querySelector('.marquee').innerHTML = m.type === 'claw'
     ? `${m.name}<small>${stars(m.level)} 난이도 ${LEVEL_NAME[m.level]} · 집게 힘 ${Math.round(m.power * 100)}%</small>`
     : `${m.name}<small>${stars(m.level)} ${m.levelText} · 1회 ${priceOf(m)}코인</small>`;
-  if (m.type === 'claw') ClawGame.setMachine(m); else GAMES[m.type].open(m);
+  if (m.type === 'claw') {
+    if (ClawGame.setMachine(m)) refund(1, '다른 기계로 옮겨서 진행 중이던 판이 취소됐어요');
+  } else GAMES[m.type].open(m);
   renderLineup();
   renderCoins();
 }
@@ -261,6 +268,7 @@ const gameHooks = {
     return true;
   },
   addCoins,
+  refund,
   award,
   // 최고 기록: 값을 주면 갱신 후 반환, 없으면 조회만 (lower=true면 낮을수록 좋음)
   best(key, val, lower) {

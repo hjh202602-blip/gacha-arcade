@@ -89,7 +89,10 @@ const TimerGame = (() => {
     start() {},
     // 다른 화면으로 나가면 진행 중인 도전은 취소
     stop() {
-      if (state === 'running') { cancelAnimationFrame(raf); state = 'idle'; resetScreen(); setUI(); }
+      if (state === 'running') {
+        cancelAnimationFrame(raf); state = 'idle'; resetScreen(); setUI();
+        hooks.refund(1, '화면을 나가서 10초 도전이 취소됐어요');
+      }
     },
     action,
     get state() { return state; },

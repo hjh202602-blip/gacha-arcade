@@ -390,13 +390,16 @@ const ClawGame = (() => {
       claw = newClaw();
     },
     // 다른 기계로 바꾸면 집게와 인형 더미를 새로 준비
+    // 진행 중이던 판이 취소되면 true (호출한 쪽에서 코인을 돌려줌)
     setMachine(m) {
-      if (machine === m && prizes.length) return;
+      if (machine === m && prizes.length) return false;
+      const cancelled = !!claw && claw.state !== 'idle' && claw.state !== 'reset';
       machine = m;
       claw = newClaw();
       input.left = input.right = false;
       fillPile();
       draw();
+      return cancelled;
     },
     start() {
       if (running) return;

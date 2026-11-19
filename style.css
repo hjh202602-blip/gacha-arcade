@@ -511,3 +511,26 @@ a { color: inherit; }
   box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: toastIn .25s;
 }
 @keyframes toastIn { from { transform: translate(-50%, 20px); opacity: 0; } }
+
+/* ================= 모바일 보정 ================= */
+.neon-sign { word-break: keep-all; }
+@media (max-width: 620px) {
+  .neon-sign { font-size: 30px; padding: 8px 16px; letter-spacing: 1px; }
+  /* 폰에서는 기계 그림 높이를 줄여 조작 버튼이 한 화면에 보이게 */
+  #claw-canvas, .game-canvas {
+    width: auto; max-width: 100%; max-height: 56svh; margin: 0 auto;
+  }
+  .timer-screen { max-height: 50svh; margin: 0 auto; }
+  .marquee { font-size: 22px; padding: 10px 0 8px; }
+  .panel { margin-top: 8px; padding: 10px; }
+  .status { margin-bottom: 8px; }
+  .coin-row { margin-top: 8px; }
+  .act { padding: 12px; }
+  .hint { display: none; }
+}
+@media (max-width: 620px) {
+  /* 인형뽑기는 조작 버튼 줄이 하나 더 있어서 조금 더 작게 */
+  #claw-canvas { max-height: 48svh; }
+  .pad { width: 56px; height: 56px; }
+  .drop { width: 90px; height: 60px; font-size: 20px; }
+}
