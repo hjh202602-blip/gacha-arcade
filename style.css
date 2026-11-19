@@ -765,3 +765,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, va
   .act, .coin { min-height: 56px; font-size: 19px; padding: 12px; }
   .act.big-btn { min-height: 64px; font-size: 23px; }
 }
+
+/* 교환기·진열장·등급표를 기계 위로 */
+.store-extras { margin: 0 auto 48px; }
