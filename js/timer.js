@@ -39,7 +39,7 @@ const TimerGame = (() => {
     els.extra.textContent = `최고 오차 ${(best / 100).toFixed(2)}초`;
     setUI(grade, cs);
     if (grade) {
-      const doll = dollsOf(machine.id).find(d => d.grade === grade);
+      const doll = pickOfGrade(machine.id, grade);
       setTimeout(() => hooks.award(doll, `${fmt(cs / 100)}초! ${grade}등급 달성`), 700);
     }
     setTimeout(() => { if (state === 'result') { state = 'idle'; setUI(); } }, 1200);

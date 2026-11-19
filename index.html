@@ -25,6 +25,20 @@
       <div class="neon-sub">24시 무인 운영 · 1회 1코인 · 뽑은 인형은 진열장에 보관돼요</div>
     </div>
     <div class="store-floor">
+      <div class="special-banner" id="special-banner"></div>
+
+      <section class="daily" aria-label="오늘의 인형">
+        <div class="daily-head">
+          <h2>🏆 오늘의 인형 TOP 3</h2>
+          <span class="daily-date" id="daily-date"></span>
+        </div>
+        <div class="daily-row" id="daily-picks"></div>
+        <div class="daily-free">
+          <div><b>🎁 오늘의 무료 코인</b><span id="daily-free-note"></span></div>
+          <button class="sell-btn" id="daily-free-btn">🎁 받기</button>
+        </div>
+      </section>
+
       <div class="store-extras">
         <button class="changer" id="coin-changer">
           <span class="changer-screen">동전 교환기</span>
@@ -352,6 +366,33 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
+
+  <!-- 개발자 모드 -->
+  <div class="dev-login" id="dev-login" hidden>
+    <form class="dev-card" id="dev-form" autocomplete="off">
+      <h3>🛠 개발자 모드</h3>
+      <input type="password" id="dev-pass" placeholder="개발자 암호" aria-label="개발자 암호">
+      <p class="dev-msg" id="dev-msg"></p>
+      <div class="dev-btns"><button type="submit" class="primary">들어가기</button><button type="button" id="dev-cancel">취소</button></div>
+    </form>
+  </div>
+  <aside class="dev-panel" id="dev-panel" hidden>
+    <header><b>🛠 개발자 모드</b><button id="dev-close">끄기</button></header>
+    <div class="dev-info" id="dev-info"></div>
+    <div class="dev-grid">
+      <button data-dev="coins100">🪙 +100</button>
+      <button data-dev="coins1000">🪙 +1000</button>
+      <button data-dev="coins0">🪙 0으로</button>
+      <button data-dev="unlockAll">🔓 모두 해금</button>
+      <button data-dev="lockAll">🔒 해금 초기화</button>
+      <button data-dev="allDolls">🧸 인형 모두 1개씩</button>
+      <button data-dev="specialOn">✨ 특별 뽑기 시작</button>
+      <button data-dev="specialOff">✨ 특별 뽑기 끝</button>
+      <button data-dev="dailyReroll">🏆 TOP3 다시 뽑기</button>
+      <button data-dev="freeReset">🎁 무료 코인 다시</button>
+      <button data-dev="resetSave" class="danger">🗑 저장 초기화</button>
+    </div>
+  </aside>
 
   <script src="js/dolls.js"></script>
   <script src="js/claw.js"></script>

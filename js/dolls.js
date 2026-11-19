@@ -12,10 +12,10 @@ const GRADE_ORDER = ['S', 'A', 'B', 'C', 'D'];
 
 // 매장에 있는 뽑기 기계들. power가 낮을수록 집게 힘이 약함
 const MACHINES = [
-  { id: 'animal', type: 'claw', name: '몽글 동물원', level: 1, power: 1.0,
+  { id: 'animal', type: 'claw', price: 2, name: '몽글 동물원', level: 1, power: 1.0,
     desc: '처음이라면 여기부터! 말랑한 동물 친구들',
     theme: { cab: '#ff7eb3', cab2: '#c94f86', inside: ['#ffd6e7', '#f2a3c4'], floor: '#b8487c' } },
-  { id: 'dessert', type: 'claw', unlock: 20, name: '달콤 디저트', level: 2, power: 0.9,
+  { id: 'dessert', type: 'claw', unlock: 20, price: 2, name: '달콤 디저트', level: 2, power: 0.9,
     desc: '보기만 해도 달달한 디저트 인형',
     theme: { cab: '#ffb347', cab2: '#d17d22', inside: ['#fff1d6', '#ffd08a'], floor: '#b9732a' } },
   { id: 'space', type: 'claw', unlock: 60, name: '우주 몬스터', level: 3, power: 0.8,
@@ -29,7 +29,7 @@ const MACHINES = [
   { id: 'capsule', type: 'capsule', price: 3, name: '캡슐 토이', level: 2, levelText: '운에 맡기기',
     desc: '레버를 돌리면 캡슐이 데구루루. 황금 캡슐이 나오면 대박!',
     theme: { cab: '#ff6b6b', cab2: '#b83a4a', inside: ['#ffe8e0', '#ffc9bd'], floor: '#a83246' } },
-  { id: 'punch', type: 'punch', name: '펀치 챔피언', level: 3, levelText: '타이밍',
+  { id: 'punch', type: 'punch', price: 2, name: '펀치 챔피언', level: 3, levelText: '타이밍',
     desc: '게이지가 꼭대기에 닿는 순간 펀치! 점수가 높을수록 좋은 인형',
     theme: { cab: '#ff5a36', cab2: '#a8321b', inside: ['#2b1a1a', '#4a2424'], floor: '#3a1a12' },
     rules: { S: '950점 이상', A: '850점 이상', B: '700점 이상', C: '500점 이상', D: '300점 이상' } },
@@ -37,7 +37,7 @@ const MACHINES = [
     desc: '3초 뒤 숫자가 사라진다. 정확히 10초에 멈춰라!',
     theme: { cab: '#2ec4b6', cab2: '#167a72', inside: ['#d9fffa', '#9fe8df'], floor: '#11635c' },
     rules: { S: '정확히 10.00초', A: '오차 0.05초 이내', B: '오차 0.12초 이내', C: '오차 0.25초 이내', D: '오차 0.50초 이내' } },
-  { id: 'keyring', type: 'keyring', unlock: 40, name: '열쇠고리 걸기', level: 2, levelText: '타이밍 · 고리 걸기',
+  { id: 'keyring', type: 'keyring', unlock: 40, price: 2, name: '열쇠고리 걸기', level: 2, levelText: '타이밍 · 고리 걸기',
     desc: '지나가는 열쇠고리의 고리에 갈고리를 쏙! 고리가 작을수록 귀한 키링',
     theme: { cab: '#7c5cff', cab2: '#4a32b8', inside: ['#efe9ff', '#cbbdff'], floor: '#3a2690' },
     rules: { S: '고리 아주아주 작음', A: '고리 아주 작음', B: '고리 작음', C: '고리 보통', D: '고리 큼' } },
@@ -58,7 +58,7 @@ const MACHINES = [
     theme: { cab: '#ffb000', cab2: '#b86e00', inside: ['#2b1f3a', '#3d2a55'], floor: '#1a1124' } },
 ];
 
-const DOLLS = [
+const BASE_DOLLS = [
   // 몽글 동물원
   { id: 'mongsil', machine: 'animal', grade: 'D', name: '몽실곰', desc: '안으면 몽실몽실. 매장의 터줏대감.',
     shape: 'round', color: '#c8956b', belly: '#f1d3b3', ears: 'round', eyes: 'dot', mouth: 'smile', cheeks: true },
@@ -214,26 +214,104 @@ const DOLLS = [
     shape: 'round', color: '#ffd23f', belly: '#fff0b3', ears: 'round', eyes: 'sparkle', mouth: 'smile', cheeks: true, extras: ['crown', 'belt', 'sparkles'] },
 ];
 
+// ================= 조합 인형 =================
+// 기본 인형 + (색 바꾸기 | 옷·모자 입히기)로 데이터 몇 줄만으로 인형 수를 늘린다
+const PALETTES = [
+  { name: '민트',   color: '#8fe3c8', belly: '#e9fff7', inner: '#5cc9a7' },
+  { name: '라벤더', color: '#c9b6ff', belly: '#f3eeff', inner: '#9f86f0' },
+  { name: '초코',   color: '#9a6a4a', belly: '#e2c3a3', inner: '#d9a07a' },
+  { name: '하늘',   color: '#9fd4ff', belly: '#eaf6ff', inner: '#6fb6f0' },
+  { name: '복숭아', color: '#ffc0a8', belly: '#fff0e8', inner: '#ff9a8a' },
+  { name: '레몬',   color: '#fff08a', belly: '#fffbe0', inner: '#ffd23f' },
+  { name: '밤하늘', color: '#5a5aa8', belly: '#8a88cc', inner: '#b2a8ff' },
+];
+// block: 이미 그 자리에 장식이 있으면 겹치지 않게 다른 옷을 고른다
+const OUTFITS = [
+  { key: 'beanie', name: '털모자',     color: '#ff6b6b', desc: '방울 달린 털모자를 쓰고 외출했다.', block: ['hat', 'crown', 'cream', 'halo', 'cherry', 'leaf', 'spout', 'keyring'] },
+  { key: 'scarf',  name: '목도리',     color: '#4dc9ff', desc: '줄무늬 목도리를 둘둘 감았다.',     block: ['belt', 'macaron', 'pearl'] },
+  { key: 'overall',name: '멜빵',       color: '#5b7bd5', desc: '주머니 달린 멜빵바지를 입었다.',   block: ['belt', 'melonstripes', 'macaron', 'clock', 'pearl', 'tentacles'] },
+  { key: 'cape',   name: '망토',       color: '#c0304a', desc: '펄럭이는 영웅 망토를 둘렀다.',     block: ['wings', 'tentacles', 'fluff'] },
+  { key: 'flower', name: '꽃핀',       color: '#ff8fc0', desc: '머리에 꽃핀을 꽂고 한껏 멋을 냈다.', block: ['hat', 'crown', 'bow'] },
+  { key: 'bowtie', name: '나비넥타이', color: '#e8304a', desc: '나비넥타이를 매고 파티에 간다.',   block: ['belt', 'clock', 'pearl'] },
+  { key: 'shades', name: '선글라스',   color: '#222233', desc: '선글라스를 쓰면 조금 강해진 기분.', block: ['glasses', 'eyepatch'] },
+];
+const fitOutfit = (base, i) => {
+  const ex = base.extras || [];
+  for (let k = 0; k < OUTFITS.length; k++) {
+    const o = OUTFITS[(i * 3 + k) % OUTFITS.length];
+    if (o.key === 'shades' && base.eyes === 'one') continue;
+    if (!o.block.some(b => ex.includes(b))) return o;
+  }
+  return OUTFITS[3];
+};
+const recolor = (base, p) => ({
+  color: p.color, inner: p.inner, ...(base.belly ? { belly: p.belly } : {}),
+});
+
+const VARIANT_DOLLS = BASE_DOLLS.flatMap((b, i) => {
+  const p = PALETTES[(i * 2 + 1) % PALETTES.length];
+  const o = fitOutfit(b, i);
+  return [
+    { ...b, ...recolor(b, p), id: `${b.id}__c`, base: b.id, variant: 'color',
+      name: `${p.name} ${b.name}`, desc: `${p.name}빛으로 물든 ${b.name}. ${b.desc}` },
+    { ...b, id: `${b.id}__o`, base: b.id, variant: 'outfit', outfit: o.key, outfitColor: o.color,
+      name: `${o.name} ${b.name}`, desc: `${o.desc} ${b.desc}` },
+  ];
+});
+
+// 특별 뽑기 전용: 오로라 색 + 반짝이 (평소에는 안 나옴)
+const SPECIAL_DOLLS = BASE_DOLLS.map((b, i) => {
+  const o = fitOutfit(b, i + 2);
+  return {
+    ...b, id: `${b.id}__sp`, base: b.id, special: true, variant: 'special',
+    color: 'aurora', ...(b.belly ? { belly: '#f6f0ff' } : {}), inner: '#ffd1f0',
+    outfit: o.key, outfitColor: '#ffd23f',
+    extras: [...new Set([...(b.extras || []), 'sparkles'])],
+    name: `오로라 ${b.name}`, desc: `특별 뽑기 때만 나타나는 오로라빛 ${b.name}.`,
+  };
+});
+
+const DOLLS = [...BASE_DOLLS, ...VARIANT_DOLLS, ...SPECIAL_DOLLS];
 const DOLL_BY_ID = Object.fromEntries(DOLLS.map(d => [d.id, d]));
 const MACHINE_BY_ID = Object.fromEntries(MACHINES.map(m => [m.id, m]));
+const REGULAR_POOL = Object.fromEntries(MACHINES.map(m => [m.id, DOLLS.filter(d => d.machine === m.id && !d.special)]));
+const SPECIAL_POOL = Object.fromEntries(MACHINES.map(m => [m.id, SPECIAL_DOLLS.filter(d => d.machine === m.id)]));
 
-function dollsOf(machineId) { return DOLLS.filter(d => d.machine === machineId); }
+// 지금 특별 뽑기 중인 기계 (app.js가 시간표에 맞춰 바꿈)
+const SpecialState = (() => {
+  let ids = [];
+  return {
+    set(list) { ids = list.filter(id => MACHINE_BY_ID[id]).slice(0, 2); },
+    has: id => ids.includes(id),
+    get ids() { return ids.slice(); },
+  };
+})();
+
+// 기계에 지금 들어 있는 인형들 (특별 뽑기 중이면 특별 인형)
+const dollsOf = machineId => (SpecialState.has(machineId) ? SPECIAL_POOL[machineId] : REGULAR_POOL[machineId] || []).slice();
 
 // 기계 안에서 등급 가중치로 하나 뽑기
-function pickDoll(machineId) {
+const pickDoll = machineId => {
   const pool = dollsOf(machineId);
   const total = pool.reduce((s, d) => s + GRADES[d.grade].weight, 0);
   let roll = Math.random() * total;
   for (const d of pool) if ((roll -= GRADES[d.grade].weight) < 0) return d;
   return pool[pool.length - 1];
-}
+};
+// 정해진 등급 안에서 무작위로 하나
+const pickOfGrade = (machineId, grade, exclude) => {
+  const all = dollsOf(machineId).filter(d => d.grade === grade);
+  const left = exclude ? all.filter(d => !exclude.has(d.id)) : all;
+  const pool = left.length ? left : all;
+  return pool[Math.floor(Math.random() * pool.length)];
+};
 
 // 기계별 출현 확률(%)
-function dollOdds(machineId) {
+const dollOdds = machineId => {
   const pool = dollsOf(machineId);
   const total = pool.reduce((s, d) => s + GRADES[d.grade].weight, 0);
   return Object.fromEntries(pool.map(d => [d.id, (GRADES[d.grade].weight / total) * 100]));
-}
+};
 
 // ================= 인형 그리기 =================
 // 128x128 좌표계에 그린다. 몸통 중심 (64,70), 몸통 반지름 약 42
@@ -249,7 +327,7 @@ const DollArt = (() => {
     const f = v => Math.round(v + (t - v) * p);
     return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
   }
-  const baseColor = d => (d.color === 'rainbow' ? '#b28dff' : d.color === 'galaxy' ? '#4b3bb0' : d.color);
+  const baseColor = d => (d.color === 'rainbow' ? '#b28dff' : d.color === 'galaxy' ? '#4b3bb0' : d.color === 'aurora' ? '#9fc8ff' : d.color);
 
   function circle(c, x, y, r) { c.beginPath(); c.arc(x, y, r, 0, TAU); }
   function ellipse(c, x, y, rx, ry, rot = 0) { c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, TAU); }
@@ -267,6 +345,11 @@ const DollArt = (() => {
     if (d.color === 'rainbow') {
       const g = c.createLinearGradient(CX, CY - ry, CX, CY + ry);
       ['#ff6b6b', '#ffb347', '#ffe66d', '#7ee081', '#5bc0eb', '#b28dff'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
+      return g;
+    }
+    if (d.color === 'aurora') {
+      const g = c.createLinearGradient(CX - rx, CY - ry, CX + rx, CY + ry);
+      ['#ffb8e6', '#c7b8ff', '#9fe8ff', '#b8ffd9'].forEach((col, i, a) => g.addColorStop(i / (a.length - 1), col));
       return g;
     }
     if (d.color === 'galaxy') {
@@ -394,6 +477,60 @@ const DollArt = (() => {
     star(c, x, y, r, 4, 0.3); c.fillStyle = '#fff6a8'; c.fill();
   }
 
+  // 몸 앞에 입히는 옷·모자
+  function drawOutfitFront(c, d, rx, ry, top) {
+    const col = d.outfitColor || '#ff6b6b', dark = shade(col, -0.4);
+    c.lineWidth = 2; c.strokeStyle = dark;
+    switch (d.outfit) {
+      case 'beanie': {
+        const r = rx * 0.8;
+        c.beginPath(); c.arc(CX, top + 12, r, Math.PI, 0); c.closePath();
+        c.fillStyle = col; c.fill(); c.stroke();
+        c.fillStyle = shade(col, 0.55); c.beginPath(); c.roundRect(CX - r - 3, top + 6, r * 2 + 6, 10, 5); c.fill(); c.stroke();
+        circle(c, CX, top + 12 - r - 2, 7); c.fillStyle = '#fff'; c.fill(); c.strokeStyle = '#d9d9e8'; c.stroke();
+        break;
+      }
+      case 'scarf': {
+        const y = CY + ry * 0.4;
+        c.save(); ellipse(c, CX, CY, rx + 3, ry + 3); c.clip();
+        c.fillStyle = col; c.fillRect(CX - rx - 3, y, rx * 2 + 6, 10);
+        c.fillStyle = 'rgba(255,255,255,.55)';
+        for (let x = -rx; x < rx; x += 12) c.fillRect(CX + x, y, 5, 10);
+        c.restore();
+        c.fillStyle = col; c.beginPath(); c.roundRect(CX + rx * 0.3, y + 6, 10, 20, 3); c.fill(); c.stroke();
+        c.fillStyle = 'rgba(255,255,255,.55)'; c.fillRect(CX + rx * 0.3, y + 14, 10, 4);
+        break;
+      }
+      case 'bowtie': {
+        const y = CY + 19;
+        c.fillStyle = col;
+        for (const s of [-1, 1]) {
+          c.beginPath(); c.moveTo(CX, y); c.lineTo(CX + s * 11, y - 7); c.lineTo(CX + s * 11, y + 7); c.closePath(); c.fill(); c.stroke();
+        }
+        circle(c, CX, y, 3.5); c.fill(); c.stroke();
+        break;
+      }
+      case 'flower': {
+        const fx = CX - rx * 0.62, fy = top + 9;
+        c.fillStyle = col;
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          circle(c, fx + Math.cos(a) * 6, fy + Math.sin(a) * 6, 5); c.fill();
+        }
+        circle(c, fx, fy, 4); c.fillStyle = '#ffe066'; c.fill();
+        break;
+      }
+      case 'shades': {
+        c.fillStyle = col; c.strokeStyle = '#000';
+        for (const s of [-1, 1]) { c.beginPath(); c.roundRect(CX + s * 14 - 10, CY - 10, 20, 12, 5); c.fill(); }
+        c.lineWidth = 2.5; c.beginPath(); c.moveTo(CX - 4, CY - 6); c.lineTo(CX + 4, CY - 6); c.stroke();
+        c.fillStyle = 'rgba(255,255,255,.6)';
+        for (const s of [-1, 1]) { c.fillRect(CX + s * 14 - 6, CY - 8, 4, 2); }
+        break;
+      }
+    }
+  }
+
   function draw(c, d) {
     const [rx, ry] = SHAPES[d.shape || 'round'];
     const top = CY - ry, base = baseColor(d), line = shade(base, -0.4);
@@ -411,6 +548,16 @@ const DollArt = (() => {
         c.restore();
       }
       c.strokeStyle = line; c.lineWidth = 3;
+    }
+    if (d.outfit === 'cape') {
+      const col = d.outfitColor;
+      c.beginPath();
+      c.moveTo(CX - rx * 0.55, CY - ry * 0.35);
+      c.lineTo(CX - rx - 9, CY + ry + 4);
+      c.quadraticCurveTo(CX, CY + ry + 14, CX + rx + 9, CY + ry + 4);
+      c.lineTo(CX + rx * 0.55, CY - ry * 0.35); c.closePath();
+      c.fillStyle = col; c.fill(); c.strokeStyle = shade(col, -0.4); c.stroke();
+      c.strokeStyle = line;
     }
     if (ex.has('tentacles')) {
       for (let i = 0; i < 5; i++) {
@@ -444,6 +591,13 @@ const DollArt = (() => {
     if (d.belly) { ellipse(c, CX, CY + ry * 0.55, rx * 0.62, ry * 0.5); c.fillStyle = d.belly; c.fill(); }
     if (ex.has('headband')) {
       c.fillStyle = d.accent || '#e8304a'; c.fillRect(CX - rx, CY - ry * 0.62, rx * 2, 8);
+    }
+    if (d.outfit === 'overall') {
+      const col = d.outfitColor, y0 = CY + ry * 0.42;
+      c.fillStyle = col; c.fillRect(CX - rx, y0, rx * 2, ry);
+      c.fillStyle = shade(col, 0.25); c.beginPath(); c.roundRect(CX - 8, y0 + 5, 16, 10, 3); c.fill();
+      c.fillStyle = '#ffe680';
+      for (const s of [-1, 1]) { circle(c, CX + s * 16, y0 + 3, 3); c.fill(); }
     }
     if (ex.has('belt')) {
       c.fillStyle = '#ffd23f'; c.fillRect(CX - rx, CY + 17, rx * 2, 11);
@@ -600,6 +754,7 @@ const DollArt = (() => {
       for (const s of [-1, 1]) { ellipse(c, CX + s * 9, top - 15, 3.5, 5, s * 0.5); c.fill(); }
       circle(c, CX, top - 16, 4); c.fill();
     }
+    drawOutfitFront(c, d, rx, ry, top);
     if (ex.has('sparkles')) {
       sparkle(c, CX - rx - 4, top + 4, 7);
       sparkle(c, CX + rx + 6, CY - 4, 6);

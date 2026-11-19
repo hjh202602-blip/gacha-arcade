@@ -58,7 +58,7 @@ const StackerGame = (() => {
     state = 'end'; t = 0;
     const tier = [...PRIZE_ROWS].reverse().find(([, r]) => reached >= r);
     if (tier) {
-      const doll = dollsOf(machine.id).find(d => d.grade === tier[0]);
+      const doll = pickOfGrade(machine.id, tier[0]);
       setTimeout(() => hooks.award(doll, `${reached}층 달성! ${tier[0]}등급`), 500);
     }
     setUI(tier);

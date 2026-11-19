@@ -11,10 +11,9 @@ const KeymasterGame = (() => {
   let lockers = [], state = 'idle', t = 0, kx = X_MIN, ky = Y_MIN, dx = 1, dy = 1, won = null, open = 0;
 
   function build() {
-    const pool = dollsOf(machine.id);
     const used = new Set();
     lockers = LAYOUT.map((g, i) => {
-      const doll = pool.find(d => d.grade === g && !used.has(d.id)) || pool.find(d => d.grade === g);
+      const doll = pickOfGrade(machine.id, g, used);
       used.add(doll.id);
       const cx = COLS[i % 3], top = ROWS[Math.floor(i / 3)];
       return { doll, cx, top, hx: cx, hy: top + 140, hw: HOLE[g][0], hh: HOLE[g][1] };
@@ -140,6 +139,8 @@ const KeymasterGame = (() => {
       loop = Kit.loop(update, draw);
       canvas.addEventListener('pointerdown', () => { if (state === 'moveX' || state === 'moveY') action(); });
     },
+    // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
+    restock() { if (state !== 'idle') return false; build(); draw(); return true; },
     open(m) { machine = m; setUI(); draw(); },
     start() { loop.start(); },
     stop() { loop.stop(); },

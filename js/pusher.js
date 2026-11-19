@@ -213,6 +213,8 @@ const PusherGame = (() => {
       loop = Kit.loop(update, draw);
       canvas.addEventListener('pointerdown', onPointer);
     },
+    // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
+    restock() { for (const it of items) if (it.kind === 'doll') it.doll = pickDoll(machine.id); draw(); return true; },
     open(m) { machine = m; setUI(); draw(); },
     start() { loop.start(); },
     stop() { loop.stop(); },

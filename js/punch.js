@@ -38,7 +38,7 @@ const PunchGame = (() => {
         const best = hooks.best('punch', score);
         els.extra.textContent = `최고 ${best}점`;
         if (grade) {
-          const doll = dollsOf(machine.id).find(d => d.grade === grade);
+          const doll = pickOfGrade(machine.id, grade);
           hooks.award(doll, `${score}점! ${grade}등급 달성`);
         }
         setUI();

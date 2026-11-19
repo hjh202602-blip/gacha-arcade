@@ -401,6 +401,12 @@ const ClawGame = (() => {
       draw();
       return cancelled;
     },
+    // 기계 안 인형 구성이 바뀌었을 때(특별 뽑기 시작/종료) 쉬는 중이면 더미를 새로 채움
+    refresh() {
+      if (!claw || claw.state !== 'idle') return false;
+      fillPile(); draw();
+      return true;
+    },
     start() {
       if (running) return;
       running = true; last = performance.now(); acc = 0;
@@ -410,9 +416,9 @@ const ClawGame = (() => {
       running = false; cancelAnimationFrame(raf);
       input.left = input.right = false;
     },
-    // 코인 1개로 한 판 시작
+    // 코인을 내고 한 판 시작 (코인 차감은 hooks.spendCoin이 맡음)
     insertCoin() {
-      if (claw.state !== 'idle') return false;
+      if (claw.state !== 'idle' || !hooks.spendCoin || !hooks.spendCoin()) return false;
       claw.state = 'ready'; claw.timer = PLAY_TIME;
       return true;
     },

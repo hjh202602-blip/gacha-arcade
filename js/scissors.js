@@ -143,6 +143,8 @@ const ScissorsGame = (() => {
       build();
       loop = Kit.loop(update, draw);
     },
+    // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
+    restock() { if (state !== 'idle') return false; build(); draw(); return true; },
     open(m) { machine = m; setUI(); draw(); },
     start() { loop.start(); },
     stop() { loop.stop(); if (state === 'move') doCut(); },

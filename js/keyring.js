@@ -157,6 +157,8 @@ const KeyringGame = (() => {
       loop = Kit.loop(update, draw);
       canvas.addEventListener('pointerdown', () => { if (state === 'ready') action(); });
     },
+    // 특별 뽑기 시작/종료 때 기계 안 인형을 새로 채움 (게임 중이면 다음에)
+    restock() { if (state !== 'idle') return false; fill(); draw(); return true; },
     open(m) { machine = m; setUI(); draw(); },
     start() { loop.start(); },
     stop() { loop.stop(); },
