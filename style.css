@@ -712,3 +712,56 @@ button:focus-visible, a:focus-visible { outline: 3px solid color-mix(in srgb, va
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* =====================================================================
+   버튼 잘 보이게: 더 큰 글자 · 진한 글자색 · 흰 테두리 · 또렷한 비활성 상태
+   ===================================================================== */
+.act, .coin, .sell-btn, .changer-btn, #modal-ok, .modal-actions button {
+  font-weight: 900; letter-spacing: .02em;
+  border: 2px solid rgba(255,255,255,.75);
+  text-shadow: 0 1px 0 rgba(255,255,255,.45);
+}
+.act, .coin { min-height: 62px; font-size: 21px; color: #3b2300; }
+.act.big-btn { min-height: 76px; font-size: 27px; }
+.act.stop { color: #fff; border-color: #ffd6d9; text-shadow: 0 2px 0 rgba(120,10,20,.45); font-size: 24px; }
+.sell-btn, .changer-btn { font-size: 16px; padding: 12px 22px; color: #3b2300; }
+
+/* 바깥 빛 테두리로 어두운 배경에서도 또렷하게 */
+.act:not(:disabled), .coin:not(:disabled) {
+  outline: 3px solid rgba(255,212,92,.35); outline-offset: 2px;
+}
+.act.stop:not(:disabled) { outline-color: rgba(255,90,100,.5); }
+
+/* 조작 버튼 */
+.pad, .drop { border: 3px solid rgba(255,255,255,.85); }
+.pad { font-size: 28px; text-shadow: 0 2px 2px rgba(0,60,80,.5); outline: 3px solid rgba(94,230,255,.3); outline-offset: 2px; }
+.drop { font-size: 24px; color: #3b2300; outline: 3px solid rgba(255,212,92,.35); outline-offset: 2px; }
+
+/* 비활성: 흐리게 지우지 말고 '잠김' 모양으로 읽히게 */
+.act:disabled, .coin:disabled, .sell-btn:disabled, .modal-actions button:disabled {
+  filter: none; opacity: 1;
+  background: #3a3358; color: #d6cdf2; text-shadow: none;
+  border: 2px dashed rgba(214,205,242,.5);
+  box-shadow: 0 4px 0 #231e38; outline: none; animation: none;
+}
+.act:disabled::after, .coin:disabled::after { display: none; }
+.pad:disabled, .drop:disabled { filter: grayscale(.6) brightness(.8); border-style: dashed; outline: none; }
+
+/* 보조 버튼(팝업 '닫기' 등)도 테두리로 구분 */
+.modal-actions button:not(.primary):not(.gold) {
+  background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.45);
+}
+#modal-ok, .modal-actions button.primary { color: #fff; text-shadow: 0 1px 0 rgba(120,20,60,.4); }
+.modal-actions button { min-height: 50px; font-size: 16px; }
+
+/* 상단 메뉴·탭 */
+.nav a { color: #ddd3f7; border: 1.5px solid rgba(255,255,255,.18); }
+.nav a.on { color: #fff; border-color: rgba(255,111,174,.8); }
+.shelf-tabs button { color: #e2d9fa; border: 1.5px solid rgba(255,255,255,.2); font-size: 15px; padding: 9px 18px; }
+.shelf-tabs button.on { color: #fff; border-color: rgba(255,255,255,.6); }
+.back { color: #e2d9fa; border: 1.5px solid rgba(255,255,255,.2); font-weight: 700; }
+
+@media (max-width: 620px) {
+  .act, .coin { min-height: 56px; font-size: 19px; padding: 12px; }
+  .act.big-btn { min-height: 64px; font-size: 23px; }
+}
