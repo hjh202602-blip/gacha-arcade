@@ -99,6 +99,20 @@ const MACHINES = [
     desc: '세 번 연속 펀치! 칠 때마다 게이지가 빨라지고, 세 번의 평균 점수로 결정',
     theme: { cab: '#3d7bff', cab2: '#1f4bb8', inside: ['#141a33', '#1f2a52'], floor: '#0d1226' },
     rules: { S: '평균 950점 이상', A: '평균 850점 이상', B: '평균 700점 이상', C: '평균 500점 이상', D: '평균 300점 이상' } },
+
+  // ---- 새 기계 3대 ----
+  { id: 'roulette', type: 'roulette', unlock: 40, price: 3, name: '행운 룰렛', level: 2, levelText: '운 + 멈추기',
+    desc: '빙글빙글 돌림판을 STOP! 바늘이 멈춘 칸의 등급 인형을 받아요. 꽝도 있어요',
+    theme: { cab: '#e8304a', cab2: '#9c1427', inside: ['#2a0f18', '#45182a'], floor: '#1a0710' },
+    rules: { S: '칸 4° (1.1%)', A: '칸 10° (2.8%)', B: '칸 44° (12%)', C: '칸 70° (19%)', D: '칸 162° (45%) · 꽝 19%' } },
+  { id: 'marble', type: 'marble', unlock: 55, price: 3, name: '구슬 떨어뜨리기', level: 3, levelText: '위치 고르기 + 운',
+    desc: '위에서 구슬을 떨어뜨려 핀 사이로 통통! 바깥쪽 좁은 칸일수록 귀한 인형, 가운데 옆은 꽝',
+    theme: { cab: '#4cc9f0', cab2: '#1d6f8f', inside: ['#0d1e33', '#16304f'], floor: '#081322' },
+    rules: { S: '양 끝 좁은 칸 (약 0.5%)', A: '그다음 칸 (약 5%)', B: '바깥 칸 (약 14%)', C: '꽝 옆 칸 (약 10%)', D: '정가운데 칸 (약 34%) · 꽝 약 37%' } },
+  { id: 'balloon', type: 'balloon', unlock: 85, price: 2, name: '풍선 다트', level: 3, levelText: '조준 · 타이밍',
+    desc: '좌우로 흔들리는 조준기로 다트 발사! 작은 풍선일수록 귀한 인형이 매달려 있어요',
+    theme: { cab: '#ff6fae', cab2: '#b8306e', inside: ['#bfe9ff', '#8fd3ff'], floor: '#4a90c0' },
+    rules: { S: '아주 작은 풍선', A: '작은 풍선', B: '보통 풍선', C: '큰 풍선', D: '아주 큰 풍선' } },
 ];
 
 const BASE_DOLLS = [
@@ -362,6 +376,42 @@ const BASE_DOLLS = [
     shape: 'round', color: '#ff9f40', belly: '#fff1dc', ears: 'round', eyes: 'sparkle', mouth: 'fang', cheeks: false, extras: ['stripes', 'headband', 'gloves'], accent: '#3d7bff' },
   { id: 'cp_legend', machine: 'combopunch', grade: 'S', name: '삼연타왕', desc: '세 주먹이 모두 전설이었던 단 한 명.',
     shape: 'round', color: '#3d7bff', belly: '#bcd2ff', ears: 'round', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['crown', 'belt', 'gloves', 'sparkles'], accent: '#ffd23f' },
+
+  // 행운 룰렛
+  { id: 'ru_chip', machine: 'roulette', grade: 'D', name: '칩콩', desc: '룰렛 칩처럼 납작하고 동글동글.',
+    shape: 'wide', color: '#e8304a', belly: '#ffffff', ears: 'none', eyes: 'dot', mouth: 'smile', cheeks: true },
+  { id: 'ru_clover', machine: 'roulette', grade: 'C', name: '클로버곰', desc: '돌림판이 멈출 때마다 잎을 하나씩 센다.',
+    shape: 'round', color: '#7ee081', belly: '#e6ffe0', ears: 'round', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['leaf'] },
+  { id: 'ru_dice', machine: 'roulette', grade: 'B', name: '주사위냥', desc: '던지면 늘 6이 나온다고 우긴다.',
+    shape: 'round', color: '#ffffff', ears: 'cat', inner: '#ffb3c7', eyes: 'sparkle', mouth: 'cat', cheeks: true, extras: ['spots'] },
+  { id: 'ru_star', machine: 'roulette', grade: 'A', name: '별점토끼', desc: '바늘이 별 칸에 멈추면 깡총 뛴다.',
+    shape: 'tall', color: '#ffe066', inner: '#ff9f1c', ears: 'bunny', eyes: 'sparkle', mouth: 'w', cheeks: true, extras: ['starmark', 'sparkles'] },
+  { id: 'ru_jackpot', machine: 'roulette', grade: 'S', name: '잭팟드래곤', desc: '4도짜리 칸에서만 깨어나는 행운의 용.',
+    shape: 'round', color: '#ffd23f', belly: '#fff3a8', ears: 'horns', eyes: 'sparkle', mouth: 'fang', cheeks: true, extras: ['wings', 'crown', 'belt', 'sparkles'] },
+
+  // 구슬 떨어뜨리기
+  { id: 'mb_glass', machine: 'marble', grade: 'D', name: '유리구슬콩', desc: '빛을 받으면 몸속이 반짝인다.',
+    shape: 'round', color: '#9fe8ff', ears: 'none', eyes: 'dot', mouth: 'o', cheeks: true },
+  { id: 'mb_bounce', machine: 'marble', grade: 'C', name: '통통볼곰', desc: '핀에 부딪힐 때마다 신이 난다.',
+    shape: 'round', color: '#ff9a3c', belly: '#ffe0c0', ears: 'smallround', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['stripes'] },
+  { id: 'mb_pin', machine: 'marble', grade: 'B', name: '핀볼냥', desc: '머리로 구슬을 튕겨 내는 게 특기.',
+    shape: 'round', color: '#5a5aa8', belly: '#b2a8ff', ears: 'cat', eyes: 'sparkle', mouth: 'cat', cheeks: true, extras: ['headband'], accent: '#4cc9f0' },
+  { id: 'mb_comet', machine: 'marble', grade: 'A', name: '구슬혜성', desc: '가장자리 칸으로 휙 날아드는 꼬리별.',
+    shape: 'tall', color: '#4cc9f0', belly: '#e0f8ff', ears: 'antenna', accent: '#ffe066', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['sparkles'] },
+  { id: 'mb_galaxy', machine: 'marble', grade: 'S', name: '은하구슬', desc: '맨 끝 좁은 칸 너머의 작은 우주.',
+    shape: 'round', color: 'galaxy', ears: 'none', eyes: 'sparkle', mouth: 'w', cheeks: true, extras: ['galaxystars', 'halo', 'sparkles'] },
+
+  // 풍선 다트
+  { id: 'bl_gum', machine: 'balloon', grade: 'D', name: '풍선껌콩', desc: '크게 불다가 얼굴에 붙어 버렸다.',
+    shape: 'round', color: '#ffb3d9', ears: 'none', eyes: 'happy', mouth: 'o', cheeks: true },
+  { id: 'bl_bear', machine: 'balloon', grade: 'C', name: '풍선곰', desc: '풍선 하나로 하늘을 날아 보고 싶다.',
+    shape: 'round', color: '#c8956b', belly: '#f1d3b3', ears: 'round', eyes: 'dot', mouth: 'smile', cheeks: true, extras: ['bow'], accent: '#4cc9f0' },
+  { id: 'bl_duck', machine: 'balloon', grade: 'B', name: '둥실오리', desc: '물 대신 하늘에 둥둥 떠 있다.',
+    shape: 'round', color: '#ffe066', ears: 'none', eyes: 'sparkle', mouth: 'beak', cheeks: true, extras: ['wings'] },
+  { id: 'bl_whale', machine: 'balloon', grade: 'A', name: '둥둥고래', desc: '구름 사이를 헤엄치는 풍선 고래.',
+    shape: 'wide', color: '#8fd3ff', belly: '#ffffff', ears: 'none', eyes: 'happy', mouth: 'smile', cheeks: true, extras: ['spout', 'sparkles'] },
+  { id: 'bl_angel', machine: 'balloon', grade: 'S', name: '풍선천사', desc: '가장 작은 풍선을 붙잡고 내려온 천사.',
+    shape: 'round', color: '#fff8f0', ears: 'none', eyes: 'happy', mouth: 'w', cheeks: true, extras: ['halo', 'wings', 'sparkles'] },
 ];
 
 const MACHINE_BY_ID_PRE = Object.fromEntries(MACHINES.map(m => [m.id, m.name]));
@@ -447,6 +497,9 @@ const HIDDEN_DOLLS = [
   ['flash', '물음표번개', '가끔 나오는 ?? 신호에 눌러 보면…', { shape: 'round', ears: 'antenna', accent: '#ffd60a', eyes: 'sparkle', mouth: 'o', extras: ['sparkles'] }],
   ['mole', '폭탄수집가', '한 판에 폭탄을 세 번 누르면…', { shape: 'round', ears: 'smallround', eyes: 'happy', mouth: 'fang', extras: ['hat'] }],
   ['melody', '참견음표', '순서를 보여주는 중에 버튼을 다섯 번 누르면…', { shape: 'round', ears: 'none', eyes: 'happy', mouth: 'w', extras: ['wings', 'starmark'] }],
+  ['roulette', '어지럼룰렛', '멈추지 않고 15초 동안 돌게 두면…', { shape: 'round', ears: 'none', eyes: 'sleepy', mouth: 'o', extras: ['spots', 'halo'] }],
+  ['marble', '구석구슬', '맨 왼쪽 끝에서 구슬을 떨어뜨리면…', { shape: 'round', ears: 'smallround', eyes: 'one', mouth: 'smile', extras: ['sparkles'] }],
+  ['balloon', '별사냥꾼', '천장의 작은 별을 다트로 맞히면…', { shape: 'tall', ears: 'cat', eyes: 'sparkle', mouth: 'fang', extras: ['starmark', 'hat'] }],
 ].map(([machine, name, hint, look]) => ({
   id: `hd_${machine}`, machine, grade: 'H', hidden: true, name, hint, cheeks: true,
   color: 'mystic', belly: undefined, inner: '#ff9cf0',

@@ -306,6 +306,93 @@
     </div>
   </section>
 
+  <section class="view play" data-view="play-roulette" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="roulette-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="roulette-status"></span>
+              <span id="roulette-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="roulette-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 돼요 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">STOP을 누른 뒤 1.6~2.6초 동안 서서히 멈춰요. 멈출 자리는 운에 달렸어요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-marble" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="marble-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="marble-status"></span>
+              <span id="marble-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="marble-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 떨어뜨려요 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">발사대는 가운데 구간만 움직여요. 가장자리 쪽에서 떨어뜨릴수록 바깥 칸(귀한 등급)에 가기 쉬워요.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="view play" data-view="play-balloon" hidden>
+    <div class="play-wrap">
+      <a href="#/" class="back">← 매장으로 돌아가기</a>
+      <div class="claw-layout">
+        <div class="cabinet">
+          <div class="marquee"></div>
+          <canvas id="balloon-canvas" class="game-canvas"></canvas>
+          <div class="panel">
+            <div class="status">
+              <span id="balloon-status"></span>
+              <span id="balloon-extra"></span>
+            </div>
+            <div class="coin-row">
+              <button id="balloon-btn" class="act">🪙 코인 넣기</button>
+            </div>
+            <p class="hint">화면을 눌러도 발사 · Space</p>
+          </div>
+        </div>
+
+        <aside class="lineup-box">
+          <h3>이 기계의 인형</h3>
+          <p class="lineup-meta"></p>
+          <ul class="lineup"></ul>
+          <p class="lineup-tip">풍선은 둥실둥실 움직여요. 점선이 풍선이 갈 자리를 가리킬 때 미리 쏘세요!</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
   <section class="view play" data-view="play-keymaster" hidden>
     <div class="play-wrap">
       <a href="#/" class="back">← 매장으로 돌아가기</a>
@@ -517,6 +604,9 @@
   <script src="js/reaction.js"></script>
   <script src="js/mole.js"></script>
   <script src="js/memory.js"></script>
+  <script src="js/roulette.js"></script>
+  <script src="js/marble.js"></script>
+  <script src="js/balloon.js"></script>
   <script src="js/celebrate.js"></script>
   <script src="js/app.js"></script>
   <script src="js/fx.js"></script>

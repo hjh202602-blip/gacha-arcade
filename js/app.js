@@ -11,7 +11,7 @@ const deepFreeze = o => {
   return o;
 };
 [GRADES, GRADE_ORDER, MACHINES, BASE_DOLLS, DOLLS, PALETTES, OUTFITS, DOLL_BY_ID, MACHINE_BY_ID, REGULAR_POOL, SPECIAL_POOL, HIDDEN_DOLLS, HIDDEN_BY_MACHINE].forEach(deepFreeze);
-[ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, ReactionGame, MoleGame, MemoryGame, Kit, DollArt, SpecialState, Celebrate]
+[ClawGame, CapsuleGame, PunchGame, TimerGame, KeyringGame, KeymasterGame, ScissorsGame, StackerGame, PusherGame, ReactionGame, MoleGame, MemoryGame, RouletteGame, MarbleGame, BalloonGame, Kit, DollArt, SpecialState, Celebrate]
   .forEach(o => Object.freeze(o));
 Object.freeze(Math);
 try {
@@ -638,11 +638,12 @@ const GAMES = Object.freeze({
   capsule: CapsuleGame, punch: PunchGame, timer: TimerGame,
   keyring: KeyringGame, keymaster: KeymasterGame, scissors: ScissorsGame, stacker: StackerGame,
   pusher: PusherGame, reaction: ReactionGame, mole: MoleGame, memory: MemoryGame,
+  roulette: RouletteGame, marble: MarbleGame, balloon: BalloonGame,
 });
 CapsuleGame.init({ canvas: $('capsule-canvas'), btn: $('capsule-btn'), status: $('capsule-status'), extra: $('capsule-extra') }, gameHooks);
 PunchGame.init({ canvas: $('punch-canvas'), btn: $('punch-btn'), status: $('punch-status'), extra: $('punch-extra') }, gameHooks);
 TimerGame.init({ screen: $('timer-screen'), digits: $('timer-digits'), sub: $('timer-sub'), btn: $('timer-btn'), status: $('timer-status'), extra: $('timer-extra') }, gameHooks);
-for (const type of ['keyring', 'keymaster', 'scissors', 'stacker', 'pusher', 'reaction', 'mole', 'memory']) {
+for (const type of ['keyring', 'keymaster', 'scissors', 'stacker', 'pusher', 'reaction', 'mole', 'memory', 'roulette', 'marble', 'balloon']) {
   GAMES[type].init({ canvas: $(`${type}-canvas`), btn: $(`${type}-btn`), status: $(`${type}-status`), extra: $(`${type}-extra`) }, gameHooks);
 }
 for (const [type, g] of Object.entries(GAMES)) {
